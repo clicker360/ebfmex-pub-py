@@ -64,7 +64,7 @@ class Categoria(db.Model):
 	IdCat = db.IntegerProperty()
 	Categoria = db.StringProperty()
 
-class PalabrasClave(db.Model):
+class OfertaPalabra(db.Model):
 	IdSuc = db.StringProperty()
 	IdOft = db.StringProperty()
 	Palabra = db.StringProperty()
