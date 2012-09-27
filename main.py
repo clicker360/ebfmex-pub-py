@@ -8,7 +8,7 @@ from google.appengine.ext.webapp import template
 
 from models import Cta
 from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq
-from migrate import migrateGeo
+from jobs import migrateGeo, dummyOfertas
 
 class index(webapp.RequestHandler):
 	def get(self):
@@ -29,7 +29,8 @@ application = webapp.WSGIApplication([
 	('/wsofertaxc', wsofertaxc),
 	('/wsofertaxp', wsofertaxp),
 	('/wsfaq', wsfaq),
-	('/migrate/geo', migrateGeo),
+	('/jobs/migrategeo', migrateGeo),
+	('/jobs/dummyofertas', dummyOfertas),
 	], debug=True)
 
 def main():

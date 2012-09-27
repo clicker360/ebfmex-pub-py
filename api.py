@@ -25,21 +25,21 @@ class wsofertas(webapp.RequestHandler):
 			miny = longitud - distancia
 			#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
 			#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Geo1 <= :1 AND Geo2 <= :2", maxx, maxy)
-			sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Latitud >= :1 AND Latitud <= :2", minx, maxx)
-			sucursales = sucursalesQ.run(batch_size=100)
-			output = {}
-			sucursalesList = ''
+			#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Latitud >= :1 AND Latitud <= :2", minx, maxx)
+			sucursalQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Latitud >= :1 AND Latitud <= :2", minx, maxx)
+			sucursales = sucursalQ.run(batch_size=100)
+			sucursallist = []
 			for sucursal in sucursales:
 				geo1 = sucursal.Latitud
 				geo2 = sucursal.Longitud
 				#self.response.out.write(str(minx) + ' <= ' + str(geo1) + ' <= ' + str(maxx))
 				sqdist = (latitud - geo1) ** 2  + (longitud - geo2) ** 2
+				#self.response.out.write(str(sqdist) + ' <= ' + str(distancia ** 2) + '\n')
 				if sqdist <= distancia ** 2:
-					#self.response.out.write(sucursal.Nombre + '\n')
-					sucursalesList += '\'' + sucursal.IdSuc + '\','
-			sucursalesList = sucursalesList[:-1]
-			#self.response.out.write("SELECT * FROM OfertaSucursal WHERE IdSuc IN(" + sucursalesList + ")")
-			ofertasucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdSuc IN(" + sucursalesList + ")")
+					#self.response.out.write(sucursal.Nombre)
+					sucursallist.append(str(sqdist))
+			for sucursalsqdist in sucursallist:
+				self.response.out.write(sucursalsqdist + '\n')
 
 class wsofertaxc(webapp.RequestHandler):
 	def get(self):
