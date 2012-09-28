@@ -84,6 +84,7 @@ class OfertaSucursal(db.Model):
 	lat = db.FloatProperty()
 	lng = db.FloatProperty()
 	Oferta = db.StringProperty()
+	Descripcion = db.StringProperty()
 	Precio = db.StringProperty()
         Descuento = db.StringProperty()
 	Url = db.StringProperty()

@@ -1,0 +1,8 @@
+indexes:
+
+- kind: OfertaSucursal
+  properties:
+  - name: IdSuc
+  - name: IdOft
+    direction: desc
+  - name: Oferta
