@@ -1,9 +1,10 @@
-import datetime
+import datetime, random
 
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 
-from models import Sucursal, Oferta, OfertaSucursal, Empresa
+from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria
+from randString import randLetter, randString
 
 class migrateGeo(webapp.RequestHandler):
 	def get(self):
@@ -19,13 +20,14 @@ class migrateGeo(webapp.RequestHandler):
 
 class dummyOfertas(webapp.RequestHandler):
 	def get(self):
+		for j in range(0,10):
+                        categoria = Categoria()
+                        categoria.IdCat = j
+                        categoria.Categoria = 'Dummy Categoria ' + str(j)
+                        categoria.put()
+
 		sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
                 for sucursal in sucursalesQ.run(batch_size=100000):
-			OQ = db.GqlQuery("SELECT * FROM Oferta ORDER BY IdOft DESC")
-			LastO = OQ.fetch(1)
-			lastID = 0
-			for O in LastO:
-				lastID = int(O.IdOft)
 			EQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", sucursal.IdEmp)
 			Es = EQ.fetch(1)
 			NombreE = None
@@ -36,9 +38,10 @@ class dummyOfertas(webapp.RequestHandler):
 
 				oferta = Oferta()
 				ofertasucursal = OfertaSucursal()
-				oferta.IdOft = str(lastID + 1)
+
+				oferta.IdOft = randString(10,False)
 				oferta.IdEmp = sucursal.IdEmp
-				oferta.IdCat = '1'
+				oferta.IdCat = random.randrange(10)
 				oferta.Empresa = NombreE
 				oferta.Oferta = 'Dummy oferta ' + str(i)
 				oferta.Descripcion = 'Dummy desc ' + str(i)
@@ -54,11 +57,13 @@ class dummyOfertas(webapp.RequestHandler):
 				oferta.FechaHora = now
 				oferta.put()
 
-				ofertasucursal.IdOft = str(lastID + 1)
+				ofertasucursal.IdOft = oferta.IdOft
 				ofertasucursal.IdEmp = sucursal.IdEmp
 				ofertasucursal.IdSuc = sucursal.IdSuc
+				ofertasucursal.IdCat = oferta.IdCat
 				ofertasucursal.Empresa = NombreE
 				ofertasucursal.Sucursal = sucursal.Nombre
+				ofertasucursal.Descripcion = oferta.Descripcion
 				ofertasucursal.Oferta = 'Dummy oferta ' + str(i)
 				ofertasucursal.Precio = str(i) + '99.99'
 				ofertasucursal.Descuento = '10%'

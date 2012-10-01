@@ -60,7 +60,7 @@ class Sucursal(db.Model):
 class Oferta(db.Model):
 	IdOft = db.StringProperty()
 	IdEmp = db.StringProperty()
-	IdCat = db.StringProperty()
+	IdCat = db.IntegerProperty()
 	Oferta = db.StringProperty()
 	Empresa = db.StringProperty()
 	Descripcion = db.StringProperty()
@@ -79,6 +79,7 @@ class OfertaSucursal(db.Model):
 	IdOft = db.StringProperty()
 	IdEmp = db.StringProperty()
 	IdSuc = db.StringProperty()
+	IdCat = db.IntegerProperty()
 	Empresa = db.StringProperty()
 	Sucursal = db.StringProperty()
 	lat = db.FloatProperty()

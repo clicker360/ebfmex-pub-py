@@ -3,22 +3,21 @@ import math, json, random
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 
-from models import Sucursal
+from models import Sucursal, OfertaSucursal
+from randString import randLetter, randString
 
-def randLetter():
-	alpha = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvXxYyZz'
-	randnum = random.randrange(len(alpha))
-	letter = alpha[randnum]
-	return letter
-
-def randOffer(nb):
+def randOffer(nb,empresa=None):
 	numoffer = 0
 	offerlist = []
 	deadline = 52
 	while numoffer < nb and deadline > 0:
 		letter = randLetter()
-		ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft >= :1 AND IdOft < :2", letter, letter + u"\ufffd")
-		ofertas = ofertasQ.fetch(10)
+		ofertasQ = None
+		if empresa == None:
+			ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft >= :1 AND IdOft < :2", letter, letter + u"\ufffd")
+		else:
+			ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdEmp = :3 AND IdOft >= :1 AND IdOft < :2", letter, letter + u"\ufffd", empresa)
+		ofertas = ofertasQ.fetch(nb)
 		if ofertas:
 			for oferta in ofertas:
 				offerdict = {'id': oferta.IdOft, 'lat': oferta.lat, 'long': oferta.lng}
@@ -35,6 +34,40 @@ def randOffer(nb):
 class wsoferta(webapp.RequestHandler):
         def get(self):
 		oid = self.request.get('id')
+		if oid and oid != '' and oid != None:
+			#self.response.out.write(oid)
+			ofertasQ = db.GqlQuery("SELECT * FROM Oferta WHERE IdOft = :1", oid)
+			ofertas = ofertasQ.fetch(1)
+			ofertadict = {}
+			for oferta in ofertas:
+				ofertadict['id'] = oid
+				tipo = None
+				if oferta.Descuento == '' or oferta.Descuento == None:
+					tipo = 1
+				else:
+					tipo = 2
+				ofertadict['tipo_oferta'] = tipo
+				ofertadict['oferta'] = oferta.Oferta
+				ofertadict['descripcion'] = oferta.Descripcion
+				suclist = []
+                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
+                                sucursales = sucursalQ.run(batch_size=100)
+                                for suc in sucursales:
+	                                sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+                                        suclist.append(sucdict)
+                                ofertadict['sucursales'] = suclist
+				empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
+				empresas = empQ.fetch(1)
+				emplist = {}
+				for empresa in empresas:
+					emplist['id'] = empresa.IdEmp
+					emplist['nombre'] = empresa.Nombre
+				ofertadict['empresa'] = emplist
+				ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
+			self.response.out.write(json.dumps(ofertadict))
+		else:
+			errordict = {'error': -1}
+			self.response.out.write(json.dumps(errordict))
 
 class wsofertas(webapp.RequestHandler):
 	def get(self):
@@ -55,7 +88,17 @@ class wsofertas(webapp.RequestHandler):
 
 		if not latitud or not longitud or not distancia:
 			#self.response.out.write('Ofertas random')
-			self.response.out.write(json.dumps(randOffer(10)))
+			oidlist = []
+			ofertas = randOffer(10)
+			for oferta in ofertas:
+				oidlist.append(oferta['id'])
+			ROQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft IN :1", oidlist)
+			RO = ROQ.fetch(10)
+			outputlist = []
+			for oferta in RO:
+				ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'url': oferta.Url}
+				outputlist.append(ofertadict)
+			self.response.out.write(json.dumps(outputlist))
 		else:
 			maxx = latitud + distancia
 			minx = latitud - distancia
@@ -127,13 +170,22 @@ class wsofertas(webapp.RequestHandler):
 
 class wsofertaxc(webapp.RequestHandler):
 	def get(self):
-		latitud = self.request.get('latitud')
-                longitud = self.request.get('longitud')
-                distancia = self.request.get('distancia')
-		categoria = self.request.get('categoria')
-		status = self.request.get('status')
-		start = self.request.get('start')
-		estado = self.request.get('estado')
+		try:
+			latitud = self.request.get('latitud')
+			longitud = self.request.get('longitud')
+			distancia = self.request.get('distancia')
+			categoria = self.request.get('categoria')
+			status = self.request.get('status')
+			start = self.request.get('start')
+			entidad = self.request.get('entidad')
+			if latitud and longitud and distancia:
+				self.response.out.write("Coord")
+			elif entidad:
+				self.response.out.write("entidad")
+			else:
+				self.response.out.write("N/A")
+		except ValueError:
+			self.response.out.write('Value Error')
 
 class wsofertaxp(webapp.RequestHandler):
         def get(self):
