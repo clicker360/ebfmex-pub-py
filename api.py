@@ -3,7 +3,7 @@ import math, json, random
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 
-from models import Sucursal, OfertaSucursal
+from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra
 from randString import randLetter, randString
 
 def randOffer(nb,empresa=None):
@@ -30,6 +30,48 @@ def randOffer(nb,empresa=None):
 		return errordict
 	else:
 		return offerlist
+
+class sucursales(webapp.RequestHandler):
+	def get(self):
+		sucursalesQ = Sucursal.all()
+		self.response.headers['Content-Type'] = 'text/plain'
+		outputlist = []
+		for sucursal in sucursalesQ:
+			sucdict = {}
+			sucdict['id'] = sucursal.IdSuc
+			sucdict['nombre'] = sucursal.Nombre
+			sucdict['direccion'] = {'calle': sucursal.DirCalle, 'colonia': sucursal.DirCol, 'cp': sucursal.DirCp,'entidad': sucursal.DirEnt,'municipio': sucursal.DirMun}
+			sucdict['logo'] = None
+			sucdict['lat'] = sucursal.Latitud
+			sucdict['long'] = sucursal.Longitud
+			empresaQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", sucursal.IdEmp)
+			empresas = empresaQ.fetch(1)
+			empresadict = {}
+			for empresa in empresas:
+				empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url}
+			sucdict['empresa'] = empresadict
+			ofertas = Oferta.all()
+			ofertaslist = []
+			for oferta in ofertas:
+				ofertadict = {}
+				ofertadict['id'] = oferta.IdOft
+				ofertadict['oferta'] = oferta.Oferta
+				ofertadict['descripcion'] = oferta.Descripcion
+				ofertadict['descuento'] = oferta.Descuento
+				ofertadict['enlinea'] = oferta.Enlinea
+				ofertadict['categoria'] = oferta.IdCat
+				ofertadict['precio'] = oferta.Precio
+				ofertadict['tarjetas'] = oferta.Tarjetas
+				ofertadict['url'] = oferta.Url
+				palabraslist = []
+				palabras = OfertaPalabra.all().filter("IdSuc=", sucursal.IdSuc)
+				for palabra in palabras:
+					palabraslist.append(palabra.Palabra)
+				ofertadict['palabras'] = palabraslist
+				ofertaslist.append(ofertadict)
+			sucdict['ofertas'] = ofertaslist
+			outputlist.append(sucdict)
+		self.response.out.write(json.dumps(outputlist))
 
 class wsoferta(webapp.RequestHandler):
         def get(self):
