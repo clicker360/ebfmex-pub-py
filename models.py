@@ -34,7 +34,7 @@ class Empresa(db.Model):
 	Benef = db.IntegerProperty()
 	PartLinea = db.IntegerProperty()
 	ExpComer = db.IntegerProperty()
-	Desc = db.StringProperty()
+	Desc = db.TextProperty()
 	FechaHora = db.DateTimeProperty()
 	Status = db.BooleanProperty()
 
@@ -67,6 +67,7 @@ class Oferta(db.Model):
 	Codigo = db.StringProperty()
 	Precio = db.StringProperty()
 	Descuento = db.StringProperty()
+	Promocion = db.StringProperty()
 	Enlinea = db.BooleanProperty()
 	Url = db.StringProperty()
 	Tarjetas = db.StringProperty()

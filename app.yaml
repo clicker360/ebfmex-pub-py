@@ -1,5 +1,5 @@
-application: ebfmex-pub
-version: webservice
+application: ebfmxorg
+version: movil
 runtime: python27
 api_version: 1
 threadsafe: false

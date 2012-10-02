@@ -29,9 +29,9 @@ application = webapp.WSGIApplication([
 	('/wsofertaxc', wsofertaxc),
 	('/wsofertaxp', wsofertaxp),
 	('/wsfaq', wsfaq),
-	('/jobs/migrategeo', migrateGeo),
-	('/jobs/dummyofertas', dummyOfertas),
-	('/sucursales', sucursales),
+	#('/jobs/migrategeo', migrateGeo),
+	#('/jobs/dummyofertas', dummyOfertas),
+	('/db', sucursales),
 	], debug=True)
 
 def main():
