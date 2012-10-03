@@ -40,11 +40,13 @@ class sucursales(webapp.RequestHandler):
 		if not timestamp or not horas or timestamp == None or horas == None or timestamp == '' or horas == '':
 			errordict = {'error': 'GET vars error'}
 			self.response.out.write(json.dumps(errordict))
+		elif len(timestamp) != 10:
+			errordict = {'error': 'timestamp must be 10 chars long'}
+                        self.response.out.write(json.dumps(errordict))
 		else:
 			try:
 				timestamp = datetime.strptime(timestamp,'%Y%m%d%H')
 				horas = int(horas)
-				horas += 5
 				timestampend = timestamp + timedelta(hours = horas)
 			except ValueError:
 				errordict = {'error': 'Value Error'}
@@ -55,6 +57,8 @@ class sucursales(webapp.RequestHandler):
 			else:
 				#sucursales = Sucursal.all()
 				#self.response.out.write(str(timestamp) + ' - ' + str(timestampend))
+				timestamp += timedelta(hours = 5)
+				timestampend += timedelta(hours = 5)
 				sucursales = Sucursal.all().filter("FechaHora >=", timestamp).filter("FechaHora <=", timestampend)
 				#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
 				#sucursales = sucursalesQ.fetch(250)
@@ -74,7 +78,7 @@ class sucursales(webapp.RequestHandler):
 					for empresa in empresas:
 						empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url}
 					sucdict['empresa'] = empresadict
-					ofertas = Oferta.all()
+					ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc)
 					ofertaslist = []
 					for oferta in ofertas:
 						ofertadict = {}
@@ -86,7 +90,6 @@ class sucursales(webapp.RequestHandler):
 						ofertadict['enlinea'] = oferta.Enlinea
 						ofertadict['categoria'] = oferta.IdCat
 						ofertadict['precio'] = oferta.Precio
-						ofertadict['tarjetas'] = oferta.Tarjetas
 						ofertadict['url'] = oferta.Url
 						palabraslist = []
 						palabras = OfertaPalabra.all().filter("IdSuc=", sucursal.IdSuc)

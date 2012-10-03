@@ -3,7 +3,7 @@ import datetime, random
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 
-from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria
+from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra
 from randString import randLetter, randString
 
 class migrateGeo(webapp.RequestHandler):
@@ -17,6 +17,21 @@ class migrateGeo(webapp.RequestHandler):
 			sucursal.Latitud = latitud
 			sucursal.Longitud = longitud
 			sucursal.put()
+
+class cleandummy(webapp.RequestHandler):
+	def get(self):
+		cats = Categoria.all()
+		for cat in cats:
+			db.delete(cat)
+		ofs = Oferta.all()
+		for of in ofs:
+			db.delete(of)
+		ofsucs = OfertaSucursal.all()
+		for ofsuc in ofsucs:
+			db.delete(ofsuc)
+		ofpals = OfertaPalabra.all()
+		for ofpal in ofpals:
+			db.delete(ofpal)
 
 class dummyOfertas(webapp.RequestHandler):
 	def get(self):
@@ -72,3 +87,11 @@ class dummyOfertas(webapp.RequestHandler):
 				ofertasucursal.lat = sucursal.Latitud
 				ofertasucursal.lng = sucursal.Longitud
 				ofertasucursal.put()
+
+				for k in range(0,5):
+					randnum = random.randrange(20)
+					ofertapalabra = OfertaPalabra()
+					ofertapalabra.IdSuc = sucursal.IdSuc
+					ofertapalabra.IdOft = oferta.IdOft
+					ofertapalabra.Palabra = 'palabradummy' + str(randnum)
+					ofertapalabra.put()

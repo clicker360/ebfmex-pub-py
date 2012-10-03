@@ -89,6 +89,8 @@ class OfertaSucursal(db.Model):
 	Descripcion = db.StringProperty()
 	Precio = db.StringProperty()
         Descuento = db.StringProperty()
+	Promocion = db.StringProperty()
+	Enlinea = db.BooleanProperty()
 	Url = db.StringProperty()
 	StatusPub = db.BooleanProperty()
 
