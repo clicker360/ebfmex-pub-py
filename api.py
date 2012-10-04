@@ -22,7 +22,7 @@ def randOffer(nb,empresa=None):
 		ofertas = ofertasQ.fetch(nb)
 		if ofertas:
 			for oferta in ofertas:
-				offerdict = {'id': oferta.IdOft, 'lat': oferta.lat, 'long': oferta.lng}
+				offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.lat, 'long': oferta.lng}
 				offerlist.append(offerdict)
 				numoffer += 1
 		else:
@@ -240,7 +240,7 @@ class wsofertas(webapp.RequestHandler):
 
 class wsofertaxc(webapp.RequestHandler):
 	def get(self):
-		try:
+		"""try:
 			latitud = self.request.get('latitud')
 			longitud = self.request.get('longitud')
 			distancia = self.request.get('distancia')
@@ -255,7 +255,53 @@ class wsofertaxc(webapp.RequestHandler):
 			else:
 				self.response.out.write("N/A")
 		except ValueError:
-			self.response.out.write('Value Error')
+			self.response.out.write('Value Error')"""
+
+		categoria = int(self.request.get('categoria'))
+		pagina = self.request.get('pagina')
+		if not categoria or categoria == '':
+			errordict = {'error': 'Falta ID de categoria'}
+			self.response.out.write(json.dumps(errordict))
+		else:
+			if not pagina or pagina == '':
+				pagina = 1
+			pagina = int(pagina)
+			if pagina > 0:
+				pagina -= 1
+				pagina *= 10
+			ofertasQ = db.GqlQuery("SELECT * FROM Oferta WHERE IdCat = :1 ORDER BY FechaHora DESC", categoria)
+			ofertas = ofertasQ.fetch(10, offset=pagina)
+			#self.response.out.write(pagina)
+			ofertalist = []
+                        for oferta in ofertas:
+				#self.response.out.write("1")
+				ofertadict = {}
+                                ofertadict['id'] = oferta.IdOft
+                                tipo = None
+                                if oferta.Descuento == '' or oferta.Descuento == None:
+                                        tipo = 1
+                                else:
+                                        tipo = 2
+                                ofertadict['tipo_oferta'] = tipo
+                                ofertadict['oferta'] = oferta.Oferta
+                                ofertadict['descripcion'] = oferta.Descripcion
+                                suclist = []
+                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
+                                sucursales = sucursalQ.run(batch_size=100)
+                                for suc in sucursales:
+                                        sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+                                        suclist.append(sucdict)
+                                ofertadict['sucursales'] = suclist
+                                empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
+                                empresas = empQ.fetch(1)
+                                emplist = {}
+                                for empresa in empresas:
+                                        emplist['id'] = empresa.IdEmp
+                                        emplist['nombre'] = empresa.Nombre
+                                ofertadict['empresa'] = emplist
+                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
+				ofertalist.append(ofertadict)
+			self.response.out.write(json.dumps(ofertalist))
 
 class wsofertaxp(webapp.RequestHandler):
         def get(self):

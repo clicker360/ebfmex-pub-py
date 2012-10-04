@@ -12,3 +12,9 @@ indexes:
   properties:
   - name: IdEmp
   - name: IdOft
+
+- kind: Oferta
+  properties:
+  - name: IdCat
+  - name: FechaHora
+    direction: desc
