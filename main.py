@@ -1,4 +1,4 @@
-import os
+import os, json
 
 import wsgiref.handlers
 from google.appengine.ext import db
@@ -12,7 +12,7 @@ from jobs import migrateGeo, dummyOfertas, cleandummy
 
 class index(webapp.RequestHandler):
 	def get(self):
-		ctasQ = db.GqlQuery("SELECT * FROM Cta ORDER BY FechaHora")
+		"""ctasQ = db.GqlQuery("SELECT * FROM Cta ORDER BY FechaHora")
 		ctas = ctasQ.run(batch_size=100000)
 
 		template_vars = {
@@ -20,7 +20,9 @@ class index(webapp.RequestHandler):
 		}
 
 		path = os.path.join(os.path.dirname(__file__), 'index.html')
-                self.response.out.write(template.render(path, template_vars))
+                self.response.out.write(template.render(path, template_vars))"""
+		errordict = {'error': -1, 'message': 'Specify an API method (/db, /wsoferta, /wsofertas, /wsofertaxc, /wsofertaxp) with its variables'}
+		self.response.out.write(json.dumps(errordict))
 
 application = webapp.WSGIApplication([
         ('/', index),

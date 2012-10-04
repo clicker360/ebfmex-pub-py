@@ -37,11 +37,12 @@ class sucursales(webapp.RequestHandler):
 	def get(self):
 		timestamp = self.request.get('timestamp')
 		horas = self.request.get('horas')
+		self.response.headers['Content-Type'] = 'text/plain'
 		if not timestamp or not horas or timestamp == None or horas == None or timestamp == '' or horas == '':
-			errordict = {'error': 'GET vars error'}
+			errordict = {'error': -1, 'message': 'Must specify variables in GET method (i.e. /db?timestamp=<YYYYMMDDHH24>&horas=<int>)'}
 			self.response.out.write(json.dumps(errordict))
 		elif len(timestamp) != 10:
-			errordict = {'error': 'timestamp must be 10 chars long'}
+			errordict = {'error': -2, 'message': 'timestamp must be 10 chars long: YYYYMMDDHH24'}
                         self.response.out.write(json.dumps(errordict))
 		else:
 			try:
@@ -49,10 +50,10 @@ class sucursales(webapp.RequestHandler):
 				horas = int(horas)
 				timestampend = timestamp + timedelta(hours = horas)
 			except ValueError:
-				errordict = {'error': 'Value Error'}
+				errordict = {'error': -2, 'message': 'Value Error. Timestamp must be YYYYMMDDHH24 and horas is an integer'}
 				self.response.out.write(json.dumps(errordict))
 			if horas > 24:
-				errordict = {'error': 'Horas no puede ser > 24'}
+				errordict = {'error': -2, 'message': 'Horas must be <= 24'}
 				self.response.out.write(json.dumps(errordict))
 			else:
 				#sucursales = Sucursal.all()
@@ -103,6 +104,7 @@ class sucursales(webapp.RequestHandler):
 
 class wsoferta(webapp.RequestHandler):
         def get(self):
+		self.response.headers['Content-Type'] = 'text/plain'
 		oid = self.request.get('id')
 		if oid and oid != '' and oid != None:
 			#self.response.out.write(oid)
@@ -136,7 +138,7 @@ class wsoferta(webapp.RequestHandler):
 				ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
 			self.response.out.write(json.dumps(ofertadict))
 		else:
-			errordict = {'error': -1}
+			errordict = {'error': -1, 'message': 'Use: /wsoferta?id=<string>'}
 			self.response.out.write(json.dumps(errordict))
 
 class wsofertas(webapp.RequestHandler):
@@ -160,8 +162,11 @@ class wsofertas(webapp.RequestHandler):
 			#self.response.out.write('Ofertas random')
 			oidlist = []
 			ofertas = randOffer(10)
-			for oferta in ofertas:
-				oidlist.append(oferta['id'])
+			if ofertas:
+				for oferta in ofertas:
+					oidlist.append(oferta['id'])
+			else:
+				oidlist.append('0')
 			ROQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft IN :1", oidlist)
 			RO = ROQ.fetch(10)
 			outputlist = []
@@ -257,12 +262,14 @@ class wsofertaxc(webapp.RequestHandler):
 		except ValueError:
 			self.response.out.write('Value Error')"""
 
-		categoria = int(self.request.get('categoria'))
+		categoria = self.request.get('categoria')
 		pagina = self.request.get('pagina')
+		self.response.headers['Content-Type'] = 'text/plain'
 		if not categoria or categoria == '':
-			errordict = {'error': 'Falta ID de categoria'}
+			errordict = {'error': -1,'message': 'Correct use: /wsofertaxc?categoria=<int>[&pagina=<int>]'}
 			self.response.out.write(json.dumps(errordict))
 		else:
+			categoria = int(categoria)
 			if not pagina or pagina == '':
 				pagina = 1
 			pagina = int(pagina)
@@ -311,7 +318,9 @@ class wsofertaxp(webapp.RequestHandler):
 		keyword = self.request.get('keyword')
 		start = self.request.get('start')
                 estado = self.request.get('estado')
+		self.response.headers['Content-Type'] = 'text/plain'
 
 class wsfaq(webapp.RequestHandler):
         def get(self):
+		self.response.headers['Content-Type'] = 'text/plain'
 		self.response.out.write('FAQ')
