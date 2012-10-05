@@ -7,7 +7,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext.webapp import template
 
 from models import Cta
-from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales
+from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs
 from jobs import migrateGeo, dummyOfertas, cleandummy
 
 class index(webapp.RequestHandler):
@@ -21,7 +21,9 @@ class index(webapp.RequestHandler):
 
 		path = os.path.join(os.path.dirname(__file__), 'index.html')
                 self.response.out.write(template.render(path, template_vars))"""
-		errordict = {'error': -1, 'message': 'Specify an API method (/db, /wsoferta, /wsofertas, /wsofertaxc, /wsofertaxp) with its variables'}
+
+		self.response.headers['Content-Type'] = 'text/plain'
+		errordict = {'error': -1, 'message': 'Specify an API method (/db, /wsoferta, /wsofertas, /wsofertaxc, /wsofertaxp, /wsfaq) with its variables'}
 		self.response.out.write(json.dumps(errordict))
 
 application = webapp.WSGIApplication([
@@ -35,6 +37,8 @@ application = webapp.WSGIApplication([
 	#('/jobs/filldummy', dummyOfertas),
 	#('/jobs/cleandummy', cleandummy),
 	('/db', sucursales),
+	('/ofertaxsucursal', ofertaxsucursal),
+	('/oxs', oxs),
 	], debug=True)
 
 def main():

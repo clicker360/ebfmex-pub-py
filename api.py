@@ -1,4 +1,4 @@
-import math, json, random
+import math, json, random, urllib, urllib2
 
 from datetime import datetime, timedelta
 
@@ -323,4 +323,76 @@ class wsofertaxp(webapp.RequestHandler):
 class wsfaq(webapp.RequestHandler):
         def get(self):
 		self.response.headers['Content-Type'] = 'text/plain'
-		self.response.out.write('FAQ')
+		#self.response.out.write('FAQ')
+		faqfile = 'faq.txt'
+		data = open(faqfile)
+		data.seek(0)
+		linenb = 0
+		preguntaslist = []
+		preguntadict = {}
+		for line in data:
+			if line != '\n':
+				linenb += 1
+				if (linenb % 2) == 1:
+					preguntadict['pregunta'] = line[:-1]
+				else:
+					preguntadict['respuesta'] = line[:-1]
+			else:
+				preguntadict['id'] = linenb / 2
+				preguntaslist.append(preguntadict)
+				preguntadict = {}
+		preguntadict['id'] = linenb / 2
+                preguntaslist.append(preguntadict)
+		outputdict = {'preguntas': preguntaslist}
+		self.response.out.write(json.dumps(outputdict))
+
+class oxs(webapp.RequestHandler):
+	def get(self):
+		paramlist = ["homsunoftslgmy","pkfeswypnqnqwf"]
+		paramdict = {'params': paramlist}
+		params = urllib.urlencode(paramdict)
+		req = urllib2.Request('http://movil.ebfmex-pub.appspot.com/ofertaxsucursal',params)
+		#req.add_header("content-type", "application/json")
+		response = urllib2.urlopen(req)
+		resp = response.read()
+		self.response.out.write(resp)
+
+class ofertaxsucursal(webapp.RequestHandler):
+	def post(self):
+		paramdict = self.request.get('params')
+		params = paramdict.encode('ascii').replace('\'','')[1:-1].replace(' ','').split(",")
+
+		ofertalist = []
+		for param in params:
+			ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdSuc = :1", param)
+                        ofertas = ofertasQ.fetch(1)
+                        ofertadict = {}
+                        for oferta in ofertas:
+                                ofertadict['id'] = oferta.IdOft
+                                tipo = None
+                                if oferta.Descuento == '' or oferta.Descuento == None:
+                                        tipo = 1
+                                else:
+                                        tipo = 0
+                                ofertadict['tipo_oferta'] = tipo
+                                ofertadict['oferta'] = oferta.Oferta
+                                ofertadict['descripcion'] = oferta.Descripcion
+                                suclist = []
+                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
+                                sucursales = sucursalQ.run(batch_size=100)
+                                for suc in sucursales:
+                                        sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+                                        suclist.append(sucdict)
+                                ofertadict['sucursales'] = suclist
+                                empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
+                                empresas = empQ.fetch(1)
+                                emplist = {}
+                                for empresa in empresas:
+                                        emplist['id'] = empresa.IdEmp
+                                        emplist['nombre'] = empresa.Nombre
+                                ofertadict['empresa'] = emplist
+                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
+			ofertalist.append(ofertadict)
+
+		outputdict = {'ofertas': ofertalist}
+		self.response.out.write(json.dumps(outputdict))
