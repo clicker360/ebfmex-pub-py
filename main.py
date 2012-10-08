@@ -7,7 +7,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext.webapp import template
 
 from models import Cta
-from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs
+from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol
 from jobs import migrateGeo, dummyOfertas, cleandummy
 
 class index(webapp.RequestHandler):
@@ -32,13 +32,15 @@ application = webapp.WSGIApplication([
 	('/wsofertas', wsofertas),
 	('/wsofertaxc', wsofertaxc),
 	('/wsofertaxp', wsofertaxp),
+	('/wsempresas', wsempresas),
 	('/wsfaq', wsfaq),
-	#('/jobs/migrategeo', migrateGeo),
+	('/jobs/migrategeo', migrateGeo),
 	#('/jobs/filldummy', dummyOfertas),
 	#('/jobs/cleandummy', cleandummy),
 	('/db', sucursales),
 	('/ofertaxsucursal', ofertaxsucursal),
 	('/oxs', oxs),
+	('/changecontrol', changecontrol),
 	], debug=True)
 
 def main():

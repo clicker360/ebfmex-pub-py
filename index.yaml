@@ -18,3 +18,9 @@ indexes:
   - name: IdCat
   - name: FechaHora
     direction: desc
+
+- kind: OfertaPalabra
+  properties:
+  - name: Palabra
+  - name: FechaHora
+    direction: desc

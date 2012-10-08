@@ -38,24 +38,6 @@ class Empresa(db.Model):
 	FechaHora = db.DateTimeProperty()
 	Status = db.BooleanProperty()
 
-class Entidad(db.Model):
-        CveEnt = db.StringProperty()
-        Entidad  = db.StringProperty()
-        Abrv = db.StringProperty()
-        CveCap = db.StringProperty()
-        Capital = db.StringProperty()
-        Selected = db.StringProperty()
-
-class Municipio(db.Model):
-	CveEnt = db.StringProperty()
-        Entidad = db.StringProperty()
-        Abrv = db.StringProperty()
-        CveMun = db.StringProperty()
-        Municipio = db.StringProperty()
-        CvaCab  = db.StringProperty()
-        Cabecera = db.StringProperty()
-        Selected = db.StringProperty()
-
 class Sucursal(db.Model):
         IdSuc = db.StringProperty()
         IdEmp = db.StringProperty()
@@ -81,14 +63,14 @@ class Oferta(db.Model):
 	IdCat = db.IntegerProperty()
 	Oferta = db.StringProperty()
 	Empresa = db.StringProperty()
-	Descripcion = db.TextProperty()
+	Descripcion = db.StringProperty()
 	Codigo = db.StringProperty()
 	Precio = db.StringProperty()
 	Descuento = db.StringProperty()
 	Promocion = db.StringProperty()
 	Enlinea = db.BooleanProperty()
 	Url = db.StringProperty()
-	Tarjetas = db.BlobProperty()
+	Tarjetas = db.StringProperty()
 	Meses = db.StringProperty()
 	FechaHoraPub = db.DateTimeProperty()
 	StatusPub = db.BooleanProperty()
@@ -98,21 +80,19 @@ class OfertaSucursal(db.Model):
 	IdOft = db.StringProperty()
 	IdEmp = db.StringProperty()
 	IdSuc = db.StringProperty()
+	IdCat = db.IntegerProperty()
+	Empresa = db.StringProperty()
 	Sucursal = db.StringProperty()
 	lat = db.FloatProperty()
 	lng = db.FloatProperty()
-        Empresa = db.StringProperty()
 	Oferta = db.StringProperty()
-	NOferta = db.StringProperty()
-	Descripcion = db.TextProperty()
-	NDescripcion = db.TextProperty
-	Promocion = db.StringProperty()
+	Descripcion = db.StringProperty()
 	Precio = db.StringProperty()
         Descuento = db.StringProperty()
+	Promocion = db.StringProperty()
 	Enlinea = db.BooleanProperty()
 	Url = db.StringProperty()
 	StatusPub = db.BooleanProperty()
-	FechaHora = db.DateTimeProperty()
 
 class Categoria(db.Model):
 	IdCat = db.IntegerProperty()
@@ -122,11 +102,3 @@ class OfertaPalabra(db.Model):
 	IdEmp = db.StringProperty()
 	IdOft = db.StringProperty()
 	Palabra = db.StringProperty()
-	FechaHora = db.DateTimeProperty()
-
-class ChangeControl(db.Model):
-        Id = db.StringProperty()
-        Kind = db.StringProperty()
-        Status = db.StringProperty()
-        FechaHora = db.DateTimeProperty()
-

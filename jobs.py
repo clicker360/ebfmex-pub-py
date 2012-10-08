@@ -20,9 +20,9 @@ class migrateGeo(webapp.RequestHandler):
 
 class cleandummy(webapp.RequestHandler):
 	def get(self):
-		cats = Categoria.all()
+		"""cats = Categoria.all()
 		for cat in cats:
-			db.delete(cat)
+			db.delete(cat)"""
 		ofs = Oferta.all()
 		for of in ofs:
 			db.delete(of)
@@ -35,11 +35,11 @@ class cleandummy(webapp.RequestHandler):
 
 class dummyOfertas(webapp.RequestHandler):
 	def get(self):
-		for j in range(0,10):
+		"""for j in range(0,10):
                         categoria = Categoria()
                         categoria.IdCat = j
                         categoria.Categoria = 'Dummy Categoria ' + str(j)
-                        categoria.put()
+                        categoria.put()"""
 
 		sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
                 for sucursal in sucursalesQ.run(batch_size=100000):
@@ -65,7 +65,7 @@ class dummyOfertas(webapp.RequestHandler):
 				oferta.Descuento = '10%'
 				oferta.Enlinea = True
 				oferta.Url = 'http://localhost:8080/' + sucursal.Nombre + '/' + str(i)
-				oferta.Tarjetas = None
+				oferta.Tarjetas = ''
 				oferta.Meses = None
 				oferta.FechaHoraPub = now
 				oferta.StatusPub = True
@@ -91,7 +91,8 @@ class dummyOfertas(webapp.RequestHandler):
 				for k in range(0,5):
 					randnum = random.randrange(20)
 					ofertapalabra = OfertaPalabra()
-					ofertapalabra.IdSuc = sucursal.IdSuc
+					ofertapalabra.IdEmp = sucursal.IdEmp
 					ofertapalabra.IdOft = oferta.IdOft
 					ofertapalabra.Palabra = 'palabradummy' + str(randnum)
+					ofertapalabra.FechaHora = now
 					ofertapalabra.put()
