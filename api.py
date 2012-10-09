@@ -451,7 +451,8 @@ class oxs(webapp.RequestHandler):
 class ofertaxsucursal(webapp.RequestHandler):
 	def post(self):
 		paramdict = self.request.get('params')
-		params = paramdict.encode('ascii').replace('\'','')[1:-1].replace(' ','').split(",")
+		#params = paramdict.encode('ascii').replace('\'','')[1:-1].replace(' ','').split(",")
+		params=paramdict.encode('ascii').split(",")
 
 		ofertalist = []
 		for param in params:
@@ -488,6 +489,45 @@ class ofertaxsucursal(webapp.RequestHandler):
 
 		outputdict = {'ofertas': ofertalist}
 		self.response.out.write(json.dumps(outputdict))
+	def get(self):
+                paramdict = self.request.get('params')
+                params=paramdict.encode('ascii').split(",")
+
+                ofertalist = []
+                for param in params:
+                        ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdSuc = :1", param)
+                        ofertas = ofertasQ.fetch(1)
+                        ofertadict = {}
+                        for oferta in ofertas:
+                                ofertadict['id'] = oferta.IdOft
+                                tipo = None
+                                if oferta.Descuento == '' or oferta.Descuento == None:
+                                        tipo = 1
+                                else:
+                                        tipo = 0
+                                ofertadict['tipo_oferta'] = tipo
+                                ofertadict['oferta'] = oferta.Oferta
+                                ofertadict['descripcion'] = oferta.Descripcion
+                                ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
+                                suclist = []
+                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
+                                sucursales = sucursalQ.run(batch_size=100)
+                                for suc in sucursales:
+                                        sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+                                        suclist.append(sucdict)
+                                ofertadict['sucursales'] = suclist
+                                empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
+                                empresas = empQ.fetch(1)
+                                emplist = {}
+                                for empresa in empresas:
+                                        emplist['id'] = empresa.IdEmp
+                                        emplist['nombre'] = empresa.Nombre
+                                ofertadict['empresa'] = emplist
+                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
+                        ofertalist.append(ofertadict)
+
+                outputdict = {'ofertas': ofertalist}
+                self.response.out.write(json.dumps(outputdict))
 
 class changecontrol(webapp.RequestHandler):
 	def get(self):

@@ -34,7 +34,7 @@ application = webapp.WSGIApplication([
 	('/wsofertaxp', wsofertaxp),
 	('/wsempresas', wsempresas),
 	('/wsfaq', wsfaq),
-	('/jobs/migrategeo', migrateGeo),
+	#('/jobs/migrategeo', migrateGeo),
 	#('/jobs/filldummy', dummyOfertas),
 	#('/jobs/cleandummy', cleandummy),
 	('/db', sucursales),
