@@ -22,7 +22,7 @@ def randOffer(nb,empresa=None):
 		ofertas = ofertasQ.fetch(nb)
 		if ofertas:
 			for oferta in ofertas:
-				offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.lat, 'long': oferta.lng}
+				offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.lat, 'long': oferta.lng, 'url_logo': '/ofimg?Id=' + oferta.IdOft}
 				offerlist.append(offerdict)
 				numoffer += 1
 		else:
