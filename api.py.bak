@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 
-from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra
+from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria
 from randString import randLetter, randString
 
 def randOffer(nb,empresa=None):
@@ -22,13 +22,13 @@ def randOffer(nb,empresa=None):
 		ofertas = ofertasQ.fetch(nb)
 		if ofertas:
 			for oferta in ofertas:
-				offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.lat, 'long': oferta.lng}
+				offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.Lat, 'long': oferta.Lng, 'url_logo': '/ofimg?Id=' + oferta.IdOft}
 				offerlist.append(offerdict)
 				numoffer += 1
 		else:
 			deadline -= 1
 	if deadline == 0:
-		errordict = {'error': -1}
+		errordict = []
 		return errordict
 	else:
 		return offerlist
@@ -69,7 +69,15 @@ class sucursales(webapp.RequestHandler):
 					sucdict = {}
 					sucdict['id'] = sucursal.IdSuc
 					sucdict['nombre'] = sucursal.Nombre
-					sucdict['direccion'] = {'calle': sucursal.DirCalle, 'colonia': sucursal.DirCol, 'cp': sucursal.DirCp,'entidad': sucursal.DirEnt,'municipio': sucursal.DirMun}
+					ent = None
+					entidades = Entidad.all().filter("CveEnt =", sucursal.DirEnt)
+					for entidad in entidades:
+						ent = entidad.Entidad
+					mun = None
+					municipios = Municipio.all().filter("CveEnt =", sucursal.DirEnt).filter("CveMun =", sucursal.DirMun)
+					for municipio in municipios:
+						mun = municipio.Municipio
+					sucdict['direccion'] = {'calle': sucursal.DirCalle, 'colonia': sucursal.DirCol, 'cp': sucursal.DirCp,'entidad_id': sucursal.DirEnt, 'entidad': ent,'municipio_id': sucursal.DirMun, 'municipio': mun}
 					sucdict['logo'] = None
 					sucdict['lat'] = sucursal.Geo1
 					sucdict['long'] = sucursal.Geo2
@@ -77,7 +85,7 @@ class sucursales(webapp.RequestHandler):
 					empresas = empresaQ.fetch(1)
 					empresadict = {}
 					for empresa in empresas:
-						empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url}
+						empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': '/spic?IdEmp=' + empresa.IdEmp}
 					sucdict['empresa'] = empresadict
 					ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc)
 					ofertaslist = []
@@ -89,14 +97,26 @@ class sucursales(webapp.RequestHandler):
 						ofertadict['descuento'] = oferta.Descuento
 						ofertadict['promocion'] = oferta.Promocion
 						ofertadict['enlinea'] = oferta.Enlinea
-						ofertadict['categoria'] = oferta.IdCat
+						#ofertadict['categoria'] = oferta.IdCat
 						ofertadict['precio'] = oferta.Precio
 						ofertadict['url'] = oferta.Url
+						ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
 						palabraslist = []
-						palabras = OfertaPalabra.all().filter("IdSuc=", sucursal.IdSuc)
+						palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
 						for palabra in palabras:
 							palabraslist.append(palabra.Palabra)
 						ofertadict['palabras'] = palabraslist
+						cat = None
+						# CATEGORIA -temporal-
+						idcat = None
+						ofts = Oferta.all().filter("IdOft =", oferta.IdOft)
+						for oft in ofts:
+							idcat = oft.IdCat
+						categorias = Categoria.all().filter("IdCat =", idcat)
+						for categoria in categorias:
+							cat = categoria.Categoria
+						ofertadict['categoria_id'] = idcat
+						ofertadict['categoria'] = cat
 						ofertaslist.append(ofertadict)
 					sucdict['ofertas'] = ofertaslist
 					outputlist.append(sucdict)
@@ -121,11 +141,12 @@ class wsoferta(webapp.RequestHandler):
 				ofertadict['tipo_oferta'] = tipo
 				ofertadict['oferta'] = oferta.Oferta
 				ofertadict['descripcion'] = oferta.Descripcion
+				ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
 				suclist = []
                                 sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
                                 sucursales = sucursalQ.run(batch_size=100)
                                 for suc in sucursales:
-	                                sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+	                                sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
                                         suclist.append(sucdict)
                                 ofertadict['sucursales'] = suclist
 				empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
@@ -171,7 +192,7 @@ class wsofertas(webapp.RequestHandler):
 			RO = ROQ.fetch(10)
 			outputlist = []
 			for oferta in RO:
-				ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'url': oferta.Url}
+				ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'url': oferta.Url, 'url_logo': '/ofimg?Id=' + oferta.IdOft}
 				outputlist.append(ofertadict)
 			self.response.out.write(json.dumps(outputlist))
 		else:
@@ -228,12 +249,13 @@ class wsofertas(webapp.RequestHandler):
 						outputdict['oferta'] = oferta.Oferta
 						outputdict['descripcion'] = oferta.Descripcion
 						outputdict['distancia'] = math.sqrt(sucursalsqdist)
+						ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
 
 						suclist = []
 						sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
 						sucursales = sucursalQ.run(batch_size=100)
 						for suc in sucursales:
-							sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+							sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
 							suclist.append(sucdict)
 						outputdict['sucursales'] = suclist
 						outputdict['ofertas_relacionadas'] = randOffer(3)
@@ -292,11 +314,12 @@ class wsofertaxc(webapp.RequestHandler):
                                 ofertadict['tipo_oferta'] = tipo
                                 ofertadict['oferta'] = oferta.Oferta
                                 ofertadict['descripcion'] = oferta.Descripcion
+				ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
                                 suclist = []
                                 sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
                                 sucursales = sucursalQ.run(batch_size=100)
                                 for suc in sucursales:
-                                        sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+                                        sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
                                         suclist.append(sucdict)
                                 ofertadict['sucursales'] = suclist
                                 empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
@@ -315,10 +338,82 @@ class wsofertaxp(webapp.RequestHandler):
 		latitud = self.request.get('latitud')
                 longitud = self.request.get('longitud')
                 distancia = self.request.get('distancia')
-		keyword = self.request.get('keyword')
+		palabra = self.request.get('palabra')
+		pagina = self.request.get('pagina')
 		start = self.request.get('start')
                 estado = self.request.get('estado')
 		self.response.headers['Content-Type'] = 'text/plain'
+		if not palabra or palabra == '':
+			errordict = {'error': -1,'message': 'Correct use: /wsofertaxp?palabra=<string>[&pagina=<int>]'}
+                        self.response.out.write(json.dumps(errordict))
+		else:
+                        if not pagina or pagina == '':
+                                pagina = 1
+                        pagina = int(pagina)
+                        if pagina > 0:
+                                pagina -= 1
+                                pagina *= 10
+			palabra = palabra.lower()
+                        palabrasQ = db.GqlQuery("SELECT * FROM OfertaPalabra WHERE Palabra = :1 ORDER BY FechaHora DESC", palabra)
+                        palabras = palabrasQ.fetch(10, offset=pagina)
+			idofts = []
+			for palabra in palabras:
+				idofts.append(palabra.IdOft)
+			ofertasQ = db.GqlQuery("SELECT * FROM Oferta WHERE IdOft IN :1", idofts)
+			ofertas = ofertasQ.fetch(10)
+			ofertalist = []
+                        for oferta in ofertas:
+                                #self.response.out.write("1")
+                                ofertadict = {}
+                                ofertadict['id'] = oferta.IdOft
+                                tipo = None
+                                if oferta.Descuento == '' or oferta.Descuento == None:
+                                        tipo = 1
+                                else:
+                                        tipo = 2
+                                ofertadict['tipo_oferta'] = tipo
+                                ofertadict['oferta'] = oferta.Oferta
+                                ofertadict['descripcion'] = oferta.Descripcion
+				ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
+                                suclist = []
+                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
+                                sucursales = sucursalQ.run(batch_size=100)
+                                for suc in sucursales:
+                                        sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
+                                        suclist.append(sucdict)
+                                ofertadict['sucursales'] = suclist
+                                empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
+                                empresas = empQ.fetch(1)
+                                emplist = {}
+                                for empresa in empresas:
+                                        emplist['id'] = empresa.IdEmp
+                                        emplist['nombre'] = empresa.Nombre
+                                ofertadict['empresa'] = emplist
+                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
+                                ofertalist.append(ofertadict)
+                        self.response.out.write(json.dumps(ofertalist))
+
+class wsempresas(webapp.RequestHandler):
+	def get(self):
+		self.response.headers['Content-Type'] = 'text/plain'
+		empresas = Empresa.all().order("Nombre")
+		init = 'abcdefghijklmnopqrstuvwxyz'
+		curinitnb = int(0)
+		curinit = init[curinitnb]
+		letradict = {}
+		letralist = []
+		inite = None
+		change = False
+		for empresa in empresas:
+			#self.response.out.write(empresa.Nombre + '\n')
+			inite = empresa.Nombre[0].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n')
+			empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre}
+			try:
+				letradict[inite].append(empresadict)
+			except KeyError:
+				letradict[inite] = []
+				letradict[inite].append(empresadict)
+		self.response.out.write(json.dumps({'empresa_participantes': letradict}))
 
 class wsfaq(webapp.RequestHandler):
         def get(self):
@@ -349,7 +444,7 @@ class wsfaq(webapp.RequestHandler):
 class oxs(webapp.RequestHandler):
 	def get(self):
 		paramlist = ["homsunoftslgmy","pkfeswypnqnqwf"]
-		paramdict = {'params': paramlist}
+		paramdict = {"params": paramlist}
 		params = urllib.urlencode(paramdict)
 		req = urllib2.Request('http://movil.ebfmex-pub.appspot.com/ofertaxsucursal',params)
 		#req.add_header("content-type", "application/json")
@@ -360,7 +455,8 @@ class oxs(webapp.RequestHandler):
 class ofertaxsucursal(webapp.RequestHandler):
 	def post(self):
 		paramdict = self.request.get('params')
-		params = paramdict.encode('ascii').replace('\'','')[1:-1].replace(' ','').split(",")
+		#params = paramdict.encode('ascii').replace('\'','')[1:-1].replace(' ','').split(",")
+		params=paramdict.encode('ascii').split(",")
 
 		ofertalist = []
 		for param in params:
@@ -377,11 +473,12 @@ class ofertaxsucursal(webapp.RequestHandler):
                                 ofertadict['tipo_oferta'] = tipo
                                 ofertadict['oferta'] = oferta.Oferta
                                 ofertadict['descripcion'] = oferta.Descripcion
+				ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
                                 suclist = []
                                 sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
                                 sucursales = sucursalQ.run(batch_size=100)
                                 for suc in sucursales:
-                                        sucdict = {'id': suc.IdSuc, 'lat': suc.lat, 'long': suc.lng}
+                                        sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
                                         suclist.append(sucdict)
                                 ofertadict['sucursales'] = suclist
                                 empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
@@ -396,3 +493,74 @@ class ofertaxsucursal(webapp.RequestHandler):
 
 		outputdict = {'ofertas': ofertalist}
 		self.response.out.write(json.dumps(outputdict))
+	def get(self):
+                paramdict = self.request.get('params')
+                params=paramdict.encode('ascii').split(",")
+
+                ofertalist = []
+                for param in params:
+                        ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdSuc = :1", param)
+                        ofertas = ofertasQ.fetch(1)
+                        ofertadict = {}
+                        for oferta in ofertas:
+                                ofertadict['id'] = oferta.IdOft
+                                tipo = None
+                                if oferta.Descuento == '' or oferta.Descuento == None:
+                                        tipo = 1
+                                else:
+                                        tipo = 0
+                                ofertadict['tipo_oferta'] = tipo
+                                ofertadict['oferta'] = oferta.Oferta
+                                ofertadict['descripcion'] = oferta.Descripcion
+                                ofertadict['url_logo'] = '/ofimg?Id=' + oferta.IdOft
+                                suclist = []
+                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
+                                sucursales = sucursalQ.run(batch_size=100)
+                                for suc in sucursales:
+                                        sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
+                                        suclist.append(sucdict)
+                                ofertadict['sucursales'] = suclist
+                                empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
+                                empresas = empQ.fetch(1)
+                                emplist = {}
+                                for empresa in empresas:
+                                        emplist['id'] = empresa.IdEmp
+                                        emplist['nombre'] = empresa.Nombre
+                                ofertadict['empresa'] = emplist
+                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
+                        ofertalist.append(ofertadict)
+
+                outputdict = {'ofertas': ofertalist}
+                self.response.out.write(json.dumps(outputdict))
+
+class changecontrol(webapp.RequestHandler):
+	def get(self):
+		timestamp = self.request.get('timestamp')
+                horas = self.request.get('horas')
+                self.response.headers['Content-Type'] = 'text/plain'
+                if not timestamp or not horas or timestamp == None or horas == None or timestamp == '' or horas == '':
+                        errordict = {'error': -1, 'message': 'Must specify variables in GET method (i.e. /changecontrol?timestamp=<YYYYMMDDHH24>&horas=<int>)'}
+                        self.response.out.write(json.dumps(errordict))
+                elif len(timestamp) != 10:
+                        errordict = {'error': -2, 'message': 'timestamp must be 10 chars long: YYYYMMDDHH24'}
+                        self.response.out.write(json.dumps(errordict))
+                else:
+                        try:
+                                timestamp = datetime.strptime(timestamp,'%Y%m%d%H')
+                                horas = int(horas)
+                                timestampend = timestamp + timedelta(hours = horas)
+                        except ValueError:
+                                errordict = {'error': -2, 'message': 'Value Error. Timestamp must be YYYYMMDDHH24 and horas is an integer'}
+                                self.response.out.write(json.dumps(errordict))
+                        if horas > 24:
+                                errordict = {'error': -2, 'message': 'Horas must be <= 24'}
+                                self.response.out.write(json.dumps(errordict))
+                        else:
+                                timestamp += timedelta(hours = 5)
+                                timestampend += timedelta(hours = 5)
+				changes = ChangeControl.all().filter("FechaHora >=", timestamp).filter("FechaHora <=", timestampend)
+				changeslist = []
+				for change in changes:
+					changesdict = {'fecha': str(change.FechaHora), 'id': change.Id, 'modelo': change.Kind, 'tipo': change.Status}
+					changeslist.append(changesdict)
+				self.response.out.write(json.dumps(changeslist))

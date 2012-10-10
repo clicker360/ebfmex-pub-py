@@ -33,6 +33,24 @@ class cleandummy(webapp.RequestHandler):
 		for ofpal in ofpals:
 			db.delete(ofpal)
 
+class dummysucursal(webapp.RequestHandler):
+	def get(self):
+		suc = Sucursal()
+		suc.IdSuc = '123'
+	        suc.IdEmp = '123'
+		suc.Nombre = 'Animo Inc.'
+	        suc.Tel = '5551011852'
+       		suc.DirCalle = 'Kamurocho'
+	        suc.DirCol = 'Kabukicho'
+	        suc.DirEnt = 'Tokyo'
+	        suc.DirMun = 'Shinjuku'
+	        suc.Geo1 = '35.694798'
+	        suc.Geo2 = '139.703166'
+	        suc.FechaHora = datetime.datetime.now()
+	        suc.Latitud = float(suc.Geo1)
+	        suc.Longitud = float(suc.Geo2)
+		suc.put()
+
 class dummyOfertas(webapp.RequestHandler):
 	def get(self):
 		"""for j in range(0,10):
