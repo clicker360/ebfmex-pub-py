@@ -8,7 +8,6 @@ from google.appengine.ext.webapp import template
 
 from models import Cta
 from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol
-from jobs import migrateGeo, dummyOfertas, cleandummy, dummysucursal
 from geostuff import geogenerate
 
 class index(webapp.RequestHandler):
@@ -35,15 +34,10 @@ application = webapp.WSGIApplication([
 	('/wsofertaxp', wsofertaxp),
 	('/wsempresas', wsempresas),
 	('/wsfaq', wsfaq),
-	#('/jobs/migrategeo', migrateGeo),
-	#('/jobs/filldummy', dummyOfertas),
-	#('/jobs/cleandummy', cleandummy),
-	#('/jobs/dummysucursal', dummysucursal),
 	('/db', sucursales),
 	('/ofertaxsucursal', ofertaxsucursal),
 	('/oxs', oxs),
 	('/changecontrol', changecontrol),
-	#('/geo/generate', geogenerate),
 	], debug=True)
 
 def main():

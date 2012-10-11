@@ -130,3 +130,9 @@ class ChangeControl(db.Model):
         Status = db.StringProperty()
         FechaHora = db.DateTimeProperty()
 
+class SearchData(db.Model):
+	Sid = db.StringProperty()
+	Kind = db.StringProperty()
+	Field = db.StringProperty()
+	Value = db.StringProperty()
+	FechaHora = db.DateTimeProperty()

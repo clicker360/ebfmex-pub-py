@@ -6,6 +6,10 @@ threadsafe: false
 
 handlers:
 
+- url: /backend/.*
+  script: backend.py
+  #login: admin
+
 - url: /.*
   script: main.py
 

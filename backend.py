@@ -2,9 +2,11 @@ import datetime, random
 
 from google.appengine.ext import db
 from google.appengine.ext import webapp
+from google.appengine.ext.webapp.util import run_wsgi_app
 
-from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra
+from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra, SearchData
 from randString import randLetter, randString
+from search import generatesearch
 
 class migrateGeo(webapp.RequestHandler):
 	def get(self):
@@ -114,3 +116,18 @@ class dummyOfertas(webapp.RequestHandler):
 					ofertapalabra.Palabra = 'palabradummy' + str(randnum)
 					ofertapalabra.FechaHora = now
 					ofertapalabra.put()
+
+application = webapp.WSGIApplication([
+        #('/backend/migrategeo', migrateGeo),
+        #('/backend/filldummy', dummyOfertas),
+        #('/backend/cleandummy', cleandummy),
+        #('/backend/dummysucursal', dummysucursal),
+        #('/backend/geogenerate', geogenerate),
+	('/backend/generatesearch', generatesearch),
+        ], debug=True)
+
+def main():
+        run_wsgi_app(application)
+
+if __name__ == '__main__':
+        main()
