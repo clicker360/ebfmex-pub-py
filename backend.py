@@ -6,7 +6,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 
 from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra, SearchData
 from randString import randLetter, randString
-from search import generatesearch
+from search import generatesearch, search
 
 class migrateGeo(webapp.RequestHandler):
 	def get(self):
@@ -124,6 +124,7 @@ application = webapp.WSGIApplication([
         #('/backend/dummysucursal', dummysucursal),
         #('/backend/geogenerate', geogenerate),
 	('/backend/generatesearch', generatesearch),
+	('/backend/search', search),
         ], debug=True)
 
 def main():
