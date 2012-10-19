@@ -124,7 +124,6 @@ application = webapp.WSGIApplication([
         #('/backend/dummysucursal', dummysucursal),
         #('/backend/geogenerate', geogenerate),
 	('/backend/generatesearch', generatesearch),
-	('/backend/search', search),
         ], debug=True)
 
 def main():

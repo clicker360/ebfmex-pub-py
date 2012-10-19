@@ -9,6 +9,7 @@ from google.appengine.ext.webapp import template
 from models import Cta
 from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol
 from geostuff import geogenerate
+from backend import search
 
 class index(webapp.RequestHandler):
 	def get(self):
@@ -38,6 +39,7 @@ application = webapp.WSGIApplication([
 	('/ofertaxsucursal', ofertaxsucursal),
 	('/oxs', oxs),
 	('/changecontrol', changecontrol),
+	('/search', search),
 	], debug=True)
 
 def main():

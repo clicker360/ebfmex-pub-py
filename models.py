@@ -136,3 +136,5 @@ class SearchData(db.Model):
 	Field = db.StringProperty()
 	Value = db.StringProperty()
 	FechaHora = db.DateTimeProperty()
+	IdCat = db.IntegerProperty()
+	Enlinea = db.BooleanProperty()

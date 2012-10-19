@@ -55,17 +55,15 @@ class generatesearch(webapp.RequestHandler):
 	def get(self):
 		kindg = self.request.get('kind')
 		field = self.request.get('field')
+		days = self.request.get('days')
 		gid = self.request.get('id')
 		gvalue = self.request.get('value')
-		genlinea = self.request.get('enlinea')
 		self.response.headers['Content-Type'] = 'text/plain'
 		if not kindg or not field or kindg == '' or field == '':
-			errordict = {'error': -1, 'message': 'Correct use: /backend/generatesearch?kind=<str>&field=<str>[&id=<int>&value=<str>&entidad=<str>&enlinea=<int>]'}
+			errordict = {'error': -1, 'message': 'Correct use: /backend/generatesearch?kind=<str>&field=<str>'}
 			self.response.out.write(json.dumps(errordict))
 		elif gid and gid != '' and gvalue and gvalue != '':
-			existsQ = SearchData.all().filter("Kind = ", kindg).filter("Sid = ",sid).filter("Field = ",field)
-			if genlinea:
-				existsQ.filter("Enlinea =", genlinea)
+			existsQ = db.GqlQuery("SELECT * FROM SearchData WHERE Kind = :kindg AND Sid = :sid AND Field = :field", kindg=kindg, sid=gid, field=field)
 			for searchdata in existsQ:
 				db.delete(searchdata)
 			values = gvalue.replace('.',' ').replace(',',' ').split(' ')
@@ -76,8 +74,6 @@ class generatesearch(webapp.RequestHandler):
 					sd.Kind = kindg
 					sd.Field = field
 					sd.Value = value
-					if genlinea:
-						sd.Enlinea = genlinea
 					sd.put()
 		else:
 			try:
@@ -90,8 +86,8 @@ class generatesearch(webapp.RequestHandler):
 					for value in values:
 						if len(value) > 3:
 							exists = False
-							existsQ = SearchData.all().filter("Kind = ",kindg).filter("Sid = ",str(kind.key().id())).filter("Field = ",field).filter("Value = ", value)
-							existsR = existsQ.run(limit=1)
+							existsQ = db.GqlQuery("SELECT * FROM SearchData WHERE Kind = :kindg AND Sid = :sid AND Field = :field AND Value = :value", kindg=kindg, sid=str(kind.key().id()), field=field, value=value)
+							existsR = existsQ.fetch(1)
 							for searchdata in existsR:
 								exists = True
 							if not exists:
@@ -102,8 +98,6 @@ class generatesearch(webapp.RequestHandler):
 								newsd.Field = field
 								newsd.Value = value
 								newsd.FechaHora = datetime.now()
-                       				                if genlinea:
-                                                			newsd.Enlinea = genlinea
 								newsd.put()
 			except db.KindError:
 				errordict = {'error': -2, 'message': 'Kind ' + kind + ' couldn\'t be found. Careful it is case sensitive.'}
@@ -111,6 +105,17 @@ class generatesearch(webapp.RequestHandler):
 			except AttributeError:
 				errordict = {'error': -2, 'message': 'Kind ' + kindg+ ' doesn\'t have any attribute ' + field + '. Careful it is case sensitive.'}
                                 self.response.out.write(json.dumps(errordict))
+
+			if not days or days == '':
+                                days = -1
+                        else:
+                                days = int(days)
+			"""if days >= 0:
+				changes = ChangeControl.all().filter("Kind =", kindg).filter("Status IN ", ["M","B"])
+				if days > 0:
+					timestamp = datetime.now() - timedelta(days = days)
+					changes.filter("FechaHora >", timestamp)
+				for change in changes:"""
 
 class SearchKeyword(webapp.RequestHandler):
 	def get(self):
@@ -130,12 +135,12 @@ class SearchKeyword(webapp.RequestHandler):
                                 page *= int(results)
                         keyword = keyword.lower()
                         keywordsQ = db.GqlQuery("SELECT * FROM OfertaPalabra WHERE Palabra = :1 ORDER BY FechaHora DESC", keyword)
-                        keywords = keywordsQ.fetch(results, offset=page)
+                        palabras = palabrasQ.fetch(10, offset=pagina)
                         idofts = []
-                        for keyword in keywords:
-                                idofts.append(keyword.IdOft)
+                        for palabra in palabras:
+                                idofts.append(palabra.IdOft)
                         ofertasQ = db.GqlQuery("SELECT * FROM Oferta WHERE IdOft IN :1", idofts)
-                        ofertas = ofertasQ.fetch(results)
+                        ofertas = ofertasQ.fetch(10)
                         ofertalist = []
                         for oferta in ofertas:
                                 #self.response.out.write("1")
