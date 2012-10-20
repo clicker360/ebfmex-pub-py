@@ -138,3 +138,7 @@ class SearchData(db.Model):
 	FechaHora = db.DateTimeProperty()
 	IdCat = db.IntegerProperty()
 	Enlinea = db.BooleanProperty()
+
+class OfertaEstado(db.Model):
+	IdOft = db.StringProperty()
+	CveEnt = db.StringProperty()

@@ -3,17 +3,91 @@ from datetime import datetime, timedelta
 
 from google.appengine.ext import webapp
 from google.appengine.ext import db
+from google.appengine.api import memcache
 
 from models import *
 
 class search(webapp.RequestHandler):
+	def get(self):
+		keywords = self.request.get('keywords')
+		gkind = self.request.get('kind')
+		categoria = self.request.get('categoria')
+		estado = self.request.get('estado')
+		tipo = self.request.get('tipo')
+		self.response.headers['Content-Type'] = 'text/plain'
+		self.response.headers.add_header("Access-Control-Allow-Origin", "*")
+		if keywords:
+			kwlist = []
+			keywordslist = keywords.replace('.','').replace(',','').replace(';','').split(' ')
+			for kw in keywordslist:
+				if len(kw) >= 4:
+					#keywordslist.remove(kw)
+					kwlist.append(kw.lower())
+			nbkeywords = len(kwlist)
+			if nbkeywords > 0:
+				kwcache = memcache.get(kwlist[0])
+				if kwcache is None:
+					#self.response.out.write('Create cache')
+					searchdata = SearchData.all().filter("Value =", kwlist[0])
+					if gkind:
+						searchdata.filter("Kind =", gkind)
+					searchdata.order("-FechaHora")
+					sdlist = []
+					for sd in searchdata:
+						if gkind and gkind == 'Oferta':
+							oferta = Oferta.get(sd.Sid)
+							try:
+								estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
+							except AttributeError:
+								estados = None
+							hasestado = False
+							logourl = ''
+							try:
+								if oferta.BlobKey and len(oferta.BlobKey) > 10:
+									logourl = '/ofimg?id=' + oferta.BlobKey
+							except AttributeError:
+								logourl = None
+							for estado in estados:
+								hasestado = True
+								sddict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'CveEnt': estado.CveEnt, 'Logo': logourl}
+								sdlist.append(sddict)
+							if not hasestado:
+								sddict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'CveEnt': None, 'Logo': logourl}
+                                                                sdlist.append(sddict)
+						else:
+							sddict = {'Sid': sd.Sid, 'Kind': sd.Kind, 'Field': sd.Field}
+							sdlist.append(sddict)
+					memcache.add(kwlist[0], json.dumps(sdlist), 15)
+
+				kwcache = memcache.get(kwlist[0])
+				kwresults = json.loads(kwcache)
+				resultslist = []
+				for kwresult in kwresults:
+					validresult = True
+					if categoria:
+						if kwresult['IdCat'] != categoria:
+							validresult = False
+					elif estado:
+						if kwresult['CveEnt'] != estado:
+							validresult = False
+					if validresult == True:
+						resultslist.append(kwresult)
+				self.response.out.write(json.dumps(resultslist))
+			else:
+				errordict = {'error': -2, 'message': 'No valid keyword found: with len(keyword) > 3'}
+	                        self.response.out.write(json.dumps(errordict))
+		else:
+			errordict = {'error': -1, 'message': 'Correct use: /search?keywords=<str>[&kind=<str>&categoria=<int>&estado=<str>&tipo=<int>]'}
+                        self.response.out.write(json.dumps(errordict))
+
+class searchds(webapp.RequestHandler):
 	def get(self):
 		gvalue = self.request.get('value')
 		gfield = self.request.get('field')
 		gkind = self.request.get('kind')
 		self.response.headers['Content-Type'] = 'text/plain'
 		if not gvalue or gvalue == '':
-			errordict = {'error': -1, 'message': 'Correct use: /backend/search?value=<str>[&kind=<str>&field=<str>]'}
+			errordict = {'error': -1, 'message': 'Correct use: /searchds?value=<str>[&kind=<str>&field=<str>]'}
                         self.response.out.write(json.dumps(errordict))
 		else:
 			search = SearchData.all().filter("Value =", gvalue)
@@ -58,9 +132,10 @@ class generatesearch(webapp.RequestHandler):
 		gid = self.request.get('id')
 		gvalue = self.request.get('value')
 		genlinea = self.request.get('enlinea')
+		gcat = self.request.get('categoria')
 		self.response.headers['Content-Type'] = 'text/plain'
 		if not kindg or not field or kindg == '' or field == '':
-			errordict = {'error': -1, 'message': 'Correct use: /backend/generatesearch?kind=<str>&field=<str>[&id=<int>&value=<str>&entidad=<str>&enlinea=<int>]'}
+			errordict = {'error': -1, 'message': 'Correct use: /backend/generatesearch?kind=<str>&field=<str>[&id=<int>&value=<str>&enlinea=<int>]'}
 			self.response.out.write(json.dumps(errordict))
 		elif gid and gid != '' and gvalue and gvalue != '':
 			existsQ = SearchData.all().filter("Kind = ", kindg).filter("Sid = ",sid).filter("Field = ",field)
@@ -75,35 +150,39 @@ class generatesearch(webapp.RequestHandler):
 					sd.Sid = gid
 					sd.Kind = kindg
 					sd.Field = field
-					sd.Value = value
+					sd.Value = value.lower()
 					if genlinea:
 						sd.Enlinea = genlinea
+					if gcat:
+						sd.IdCat = int(gcat)
 					sd.put()
 		else:
 			try:
 				kindsQ = db.GqlQuery("SELECT * FROM " + kindg)
-				kinds = kindsQ.run(batch_size=100000)
+				kinds = kindsQ.run(batch_size=1000000)
 				for kind in kinds:
 					#self.response.out.write("1")
 					values = getattr(kind, field)
-					values = values.replace('.',' ').replace(',',' ').split(' ')
+					values = values.replace('\n',' ').replace('\r',' ').replace('.',' ').replace(',',' ').split(' ')
 					for value in values:
 						if len(value) > 3:
+							value = value.lower()
 							exists = False
-							existsQ = SearchData.all().filter("Kind = ",kindg).filter("Sid = ",str(kind.key().id())).filter("Field = ",field).filter("Value = ", value)
+							existsQ = SearchData.all().filter("Kind = ",kindg).filter("Sid = ",str(kind.key())).filter("Field = ",field).filter("Value = ", value)
 							existsR = existsQ.run(limit=1)
 							for searchdata in existsR:
 								exists = True
 							if not exists:
 								#self.response.out.write("2")
 								newsd = SearchData()
-								newsd.Sid = str(kind.key().id())
+								newsd.Sid = str(kind.key())
 								newsd.Kind = kindg
 								newsd.Field = field
 								newsd.Value = value
 								newsd.FechaHora = datetime.now()
-                       				                if genlinea:
-                                                			newsd.Enlinea = genlinea
+                       				                if kindg == 'Oferta':
+									newsd.Enlinea = kind.Enlinea
+									newsd.IdCat = kind.IdCat
 								newsd.put()
 			except db.KindError:
 				errordict = {'error': -2, 'message': 'Kind ' + kind + ' couldn\'t be found. Careful it is case sensitive.'}

@@ -24,3 +24,16 @@ indexes:
   - name: Palabra
   - name: FechaHora
     direction: desc
+
+- kind: SearchData
+  properties:
+  - name: Value
+  - name: FechaHora
+    direction: desc
+
+- kind: SearchData
+  properties:
+  - name: Kind
+  - name: Value
+  - name: FechaHora
+    direction: desc
