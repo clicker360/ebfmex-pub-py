@@ -7,6 +7,8 @@ from google.appengine.api import memcache
 
 from models import *
 
+H = 5
+
 class search(webapp.RequestHandler):
 	def get(self):
 		keywords = self.request.get('keywords')
@@ -18,6 +20,28 @@ class search(webapp.RequestHandler):
 		pagina = self.request.get('pagina')
 		self.response.headers['Content-Type'] = 'text/plain'
 		self.response.headers.add_header("Access-Control-Allow-Origin", "*")
+		if pagina:
+                	try:
+                        	pagina = int(pagina)
+                                if pagina < 1:
+                                       	pagina = 1
+                        except ValueError:
+                                pagina = 1
+                else:
+                        pagina = 1
+                if batchsize:
+                        try:
+                                batchsize = int(batchsize)
+                                if batchsize < 1:
+                                       batchsize = 12
+                        except ValueError:
+                                       batchsize = 12
+                else:
+                        batchsize = 12
+
+                batchstart = batchsize * (pagina - 1)
+                batchsize = batchsize * pagina
+
 		if keywords:
 			kwlist = []
 			keywordslist = keywords.replace('+',' ').replace('.',' ').replace(',',' ').replace(';',' ').split(' ')
@@ -72,29 +96,9 @@ class search(webapp.RequestHandler):
 					kwresults = json.loads(kwcache)
 					resultslist = []
 					nbvalidresults = 0
-					if pagina:
-						try:
-							pagina = int(pagina)
-							if pagina < 1:
-								pagina = 1
-						except ValueError:
-							pagina = 1
-					else:
-						pagina = 1
-					if batchsize:
-                                                try:
-                                                        batchsize = int(batchsize)
-                                                        if batchsize < 1:
-                                                                batchsize = 12
-                                                except ValueError:
-                                                        batchsize = 12
-                                        else:
-                                                batchsize = 12
 
-					batchstart = batchsize * (pagina - 1)
-					batchsize = batchsize * pagina
 					for kwresult in kwresults:
-						if nbvalidresults <= batchsize:
+						if nbvalidresults < batchsize:
 							validresult = True
 							if categoria:
 								if kwresult['IdCat'] != categoria:
@@ -115,6 +119,8 @@ class search(webapp.RequestHandler):
 										for xoft in xtrakw:
 											if xoft['Key'] == kwresult['Key']:
 												xtrafound = True
+										if xtrafound == False:
+											break
 								if xtrafound == False:
 									validresult = False
 								
@@ -129,11 +135,45 @@ class search(webapp.RequestHandler):
 					errordict = {'error': -2, 'message': 'Deadline of cache writing intents reached. Couldn\'t write cache'}
 	                                self.response.out.write(json.dumps(errordict))
 			else:
-				errordict = {'error': -2, 'message': 'No valid keyword found: with len(keyword) > 3'}
+				errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
 	                        self.response.out.write(json.dumps(errordict))
 		else:
-			errordict = {'error': -1, 'message': 'Correct use: /search?keywords=<str>[&kind=<str>&categoria=<int>&estado=<str>&tipo=<int>]'}
-                        self.response.out.write(json.dumps(errordict))
+			sd = SearchData.all()
+                        if gkind:
+	                        sd.filter("Kind =", gkind)
+                        if gkind == 'Oferta':
+                                if categoria:
+       		                        sd.filter("IdCat =", categoria)
+                                resultslist = []
+                                nbvalidresults = 0
+                                for result in sd.order("-FechaHora").run(batch_size=1000000):
+                                        validresult = True
+                                        if nbvalidresults < batchsize:
+                                                if nbvalidresults >= batchstart:
+                                                	oferta = Oferta.get(result.Sid)
+							if estado and estado != '':
+								validresult = False
+								oeQ = OfertaEstado.all().filter("IdOft =", oferta.IdOft).filter("IdEnt =", str(estado))
+								for oe in oeQ.run(limit=1):
+									validresult = True
+							if validresult == True:
+								for oft in resultslist:
+									if oft['IdOft'] == oferta.IdOft:
+										self.response.out.write(oferta.IdOft  + " already in results")
+										validresult = False
+							if validresult == True:
+								if oferta.BlobKey:
+                                                       			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+								else:
+									logourl = None
+	                                                        sddict = {'Key': result.Sid, 'Value': result.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
+	                                                        resultslist.append(sddict)
+								nbvalidresults += 1
+                                        else:
+                                        	break
+                                self.response.out.write(json.dumps(resultslist))
+			"""errordict = {'error': -1, 'message': 'Correct use: /search?keywords=<str>[&kind=<str>&categoria=<int>&estado=<str>&tipo=<int>]'}
+                        self.response.out.write(json.dumps(errordict))"""
 
 class searchds(webapp.RequestHandler):
 	def get(self):
@@ -186,7 +226,7 @@ class generatesearch(webapp.RequestHandler):
 		field = self.request.get('field')
 		gid = self.request.get('id')
 		gvalue = self.request.get('value')
-		genlinea = self.request.get('enlinea')
+		#genlinea = self.request.get('enlinea')
 		gcat = self.request.get('categoria')
 		self.response.headers['Content-Type'] = 'text/plain'
 		if not kindg or not field or kindg == '' or field == '':
@@ -194,15 +234,15 @@ class generatesearch(webapp.RequestHandler):
 			self.response.out.write(json.dumps(errordict))
 		elif gid and gid != '' and gvalue and gvalue != '':
 			existsQ = SearchData.all().filter("Kind = ", kindg).filter("Sid = ",gid).filter("Field = ",field)
-			if genlinea:
-				existsQ.filter("Enlinea =", genlinea)
+			"""if genlinea:
+				existsQ.filter("Enlinea =", genlinea)"""
 			for searchdata in existsQ:
 				db.delete(searchdata)
 			values = gvalue.replace('%20',' ').replace('+',' ').replace('.',' ').replace(',',' ').split(' ')
-			if genlinea == 'true' or genlinea == 'True' or genlinea == '0':
+			"""if genlinea == 'true' or genlinea == 'True' or genlinea == '0':
 				genlinea = True
 			else:
-				genlinea = False
+				genlinea = False"""
 			for value in values:
 				if len(value) > 3:
 					sd = SearchData()
@@ -210,11 +250,11 @@ class generatesearch(webapp.RequestHandler):
 					sd.Kind = kindg
 					sd.Field = field
 					sd.Value = value.lower()
-					if genlinea:
-						sd.Enlinea = genlinea
+					"""if genlinea:
+						sd.Enlinea = genlinea"""
 					if gcat:
 						sd.IdCat = int(gcat)
-					sd.FechaHora = datetime.now()
+					sd.FechaHora = datetime.now() - timedelta(hours = H)
 					sd.put()
 		else:
 			try:
@@ -239,7 +279,7 @@ class generatesearch(webapp.RequestHandler):
 								newsd.Kind = kindg
 								newsd.Field = field
 								newsd.Value = value
-								newsd.FechaHora = datetime.now()
+								newsd.FechaHora = datetime.now() - timedelta(hours = H)
                        				                if kindg == 'Oferta':
 									newsd.Enlinea = kind.Enlinea
 									newsd.IdCat = kind.IdCat

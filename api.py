@@ -62,8 +62,8 @@ class sucursales(webapp.RequestHandler):
 			else:
 				#sucursales = Sucursal.all()
 				#self.response.out.write(str(timestamp) + ' - ' + str(timestampend))
-				timestamp += timedelta(hours = 5)
-				timestampend += timedelta(hours = 5)
+				#timestamp += timedelta(hours = 5)
+				#timestampend += timedelta(hours = 5)
 				sucursales = Sucursal.all().filter("FechaHora >=", timestamp).filter("FechaHora <=", timestampend)
 				#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
 				#sucursales = sucursalesQ.fetch(250)
@@ -556,8 +556,8 @@ class changecontrol(webapp.RequestHandler):
                                 errordict = {'error': -2, 'message': 'Horas must be <= 24'}
                                 self.response.out.write(json.dumps(errordict))
                         else:
-                                timestamp += timedelta(hours = 5)
-                                timestampend += timedelta(hours = 5)
+                                #timestamp += timedelta(hours = 5)
+                                #timestampend += timedelta(hours = 5)
 				changes = ChangeControl.all().filter("FechaHora >=", timestamp).filter("FechaHora <=", timestampend)
 				changeslist = []
 				for change in changes:

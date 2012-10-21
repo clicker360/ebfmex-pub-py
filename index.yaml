@@ -37,3 +37,9 @@ indexes:
   - name: Value
   - name: FechaHora
     direction: desc
+
+- kind: SearchData
+  properties:
+  - name: Kind
+  - name: FechaHora
+    direction: desc
