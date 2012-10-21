@@ -1,4 +1,5 @@
 from google.appengine.ext import db
+from google.appengine.ext import blobstore
 
 class Cta(db.Model):
 	Folio = db.IntegerProperty()
@@ -80,6 +81,7 @@ class Oferta(db.Model):
 	IdEmp = db.StringProperty()
 	IdCat = db.IntegerProperty()
 	Oferta = db.StringProperty()
+	BlobKey = blobstore.BlobReferenceProperty()
 	Empresa = db.StringProperty()
 	Descripcion = db.TextProperty()
 	Codigo = db.StringProperty()
@@ -141,4 +143,4 @@ class SearchData(db.Model):
 
 class OfertaEstado(db.Model):
 	IdOft = db.StringProperty()
-	CveEnt = db.StringProperty()
+	IdEnt = db.StringProperty()

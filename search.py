@@ -14,65 +14,120 @@ class search(webapp.RequestHandler):
 		categoria = self.request.get('categoria')
 		estado = self.request.get('estado')
 		tipo = self.request.get('tipo')
+		batchsize = self.request.get('batchsize')
+		pagina = self.request.get('pagina')
 		self.response.headers['Content-Type'] = 'text/plain'
 		self.response.headers.add_header("Access-Control-Allow-Origin", "*")
 		if keywords:
 			kwlist = []
-			keywordslist = keywords.replace('.','').replace(',','').replace(';','').split(' ')
+			keywordslist = keywords.replace('+',' ').replace('.',' ').replace(',',' ').replace(';',' ').split(' ')
 			for kw in keywordslist:
 				if len(kw) >= 4:
 					#keywordslist.remove(kw)
 					kwlist.append(kw.lower())
 			nbkeywords = len(kwlist)
 			if nbkeywords > 0:
-				kwcache = memcache.get(kwlist[0])
-				if kwcache is None:
-					#self.response.out.write('Create cache')
-					searchdata = SearchData.all().filter("Value =", kwlist[0])
-					if gkind:
-						searchdata.filter("Kind =", gkind)
-					searchdata.order("-FechaHora")
-					sdlist = []
-					for sd in searchdata:
-						if gkind and gkind == 'Oferta':
-							oferta = Oferta.get(sd.Sid)
-							try:
-								estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
-							except AttributeError:
-								estados = None
-							hasestado = False
-							logourl = ''
-							try:
-								if oferta.BlobKey and len(oferta.BlobKey) > 10:
-									logourl = '/ofimg?id=' + oferta.BlobKey
-							except AttributeError:
-								logourl = None
-							for estado in estados:
-								hasestado = True
-								sddict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'CveEnt': estado.CveEnt, 'Logo': logourl}
+				for kw in kwlist:
+					kwcache = memcache.get(kw)
+					if kwcache is None:
+						#self.response.out.write('Create cache')
+						searchdata = SearchData.all().filter("Value =", kw)
+						if gkind:
+							searchdata.filter("Kind =", gkind)
+						searchdata.order("-FechaHora")
+						sdlist = []
+						for sd in searchdata:
+							if gkind and gkind == 'Oferta':
+								oferta = Oferta.get(sd.Sid)
+								try:
+									estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
+								except AttributeError:
+									estados = None
+								hasestado = False
+								logourl = ''
+								if oferta.BlobKey:
+									logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+								for estado in estados:
+									hasestado = True
+									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
+									sdlist.append(sddict)
+								if not hasestado:
+									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
+       	                                                         	sdlist.append(sddict)
+							elif gkind and gkind == 'Empresa':
+								empresa = Empresa.get(sd.Sid)
+								logourl = '/eimg?id=' + empresa.IdEmp
+								sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdEmp': empresa.IdEmp, 'Desc': empresa.Desc, 'IdEnt': empresa.DirEnt, 'Logo': logourl}
+       	                                                 	sdlist.append(sddict)
+							else:
+								sddict = {'Sid': sd.Sid, 'Kind': sd.Kind, 'Field': sd.Field, 'Value': sd.Value}
 								sdlist.append(sddict)
-							if not hasestado:
-								sddict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'CveEnt': None, 'Logo': logourl}
-                                                                sdlist.append(sddict)
-						else:
-							sddict = {'Sid': sd.Sid, 'Kind': sd.Kind, 'Field': sd.Field}
-							sdlist.append(sddict)
-					memcache.add(kwlist[0], json.dumps(sdlist), 15)
+						memcache.add(kw, json.dumps(sdlist))
 
-				kwcache = memcache.get(kwlist[0])
-				kwresults = json.loads(kwcache)
-				resultslist = []
-				for kwresult in kwresults:
-					validresult = True
-					if categoria:
-						if kwresult['IdCat'] != categoria:
-							validresult = False
-					elif estado:
-						if kwresult['CveEnt'] != estado:
-							validresult = False
-					if validresult == True:
-						resultslist.append(kwresult)
-				self.response.out.write(json.dumps(resultslist))
+				for attempt in range(20):
+					kwcache = memcache.get(kwlist[0])
+					if kwcache:
+						break
+				if kwcache:
+					kwresults = json.loads(kwcache)
+					resultslist = []
+					nbvalidresults = 0
+					if pagina:
+						try:
+							pagina = int(pagina)
+							if pagina < 1:
+								pagina = 1
+						except ValueError:
+							pagina = 1
+					else:
+						pagina = 1
+					if batchsize:
+                                                try:
+                                                        batchsize = int(batchsize)
+                                                        if batchsize < 1:
+                                                                batchsize = 12
+                                                except ValueError:
+                                                        batchsize = 12
+                                        else:
+                                                batchsize = 12
+
+					batchstart = batchsize * (pagina - 1)
+					batchsize = batchsize * pagina
+					for kwresult in kwresults:
+						if nbvalidresults <= batchsize:
+							validresult = True
+							if categoria:
+								if kwresult['IdCat'] != categoria:
+									validresult = False
+							if estado:
+								if kwresult['IdEnt'] != estado:
+									validresult = False
+							if gkind == 'Oferta':
+                                                                for result in resultslist:
+									if result['IdOft'] == kwresult['IdOft']:
+										validresult = False	
+							if validresult == True and nbkeywords > 1:
+								xtrafound = False
+								for kw in kwlist:
+									if kw != kwresult['Value']:
+										xtrafound = False
+										xtrakw = json.loads(memcache.get(kw))
+										for xoft in xtrakw:
+											if xoft['Key'] == kwresult['Key']:
+												xtrafound = True
+								if xtrafound == False:
+									validresult = False
+								
+							if validresult == True:
+								nbvalidresults += 1
+								if nbvalidresults >= batchstart:
+									resultslist.append(kwresult)
+						else:
+							break
+					self.response.out.write(json.dumps(resultslist))
+				else:
+					errordict = {'error': -2, 'message': 'Deadline of cache writing intents reached. Couldn\'t write cache'}
+	                                self.response.out.write(json.dumps(errordict))
 			else:
 				errordict = {'error': -2, 'message': 'No valid keyword found: with len(keyword) > 3'}
 	                        self.response.out.write(json.dumps(errordict))
@@ -138,12 +193,16 @@ class generatesearch(webapp.RequestHandler):
 			errordict = {'error': -1, 'message': 'Correct use: /backend/generatesearch?kind=<str>&field=<str>[&id=<int>&value=<str>&enlinea=<int>]'}
 			self.response.out.write(json.dumps(errordict))
 		elif gid and gid != '' and gvalue and gvalue != '':
-			existsQ = SearchData.all().filter("Kind = ", kindg).filter("Sid = ",sid).filter("Field = ",field)
+			existsQ = SearchData.all().filter("Kind = ", kindg).filter("Sid = ",gid).filter("Field = ",field)
 			if genlinea:
 				existsQ.filter("Enlinea =", genlinea)
 			for searchdata in existsQ:
 				db.delete(searchdata)
-			values = gvalue.replace('.',' ').replace(',',' ').split(' ')
+			values = gvalue.replace('%20',' ').replace('+',' ').replace('.',' ').replace(',',' ').split(' ')
+			if genlinea == 'true' or genlinea == 'True' or genlinea == '0':
+				genlinea = True
+			else:
+				genlinea = False
 			for value in values:
 				if len(value) > 3:
 					sd = SearchData()
@@ -155,6 +214,7 @@ class generatesearch(webapp.RequestHandler):
 						sd.Enlinea = genlinea
 					if gcat:
 						sd.IdCat = int(gcat)
+					sd.FechaHora = datetime.now()
 					sd.put()
 		else:
 			try:
