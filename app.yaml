@@ -1,10 +1,10 @@
-application: ebfmxorg
+application: ebfmex-pub
 version: movil
 runtime: python27
 api_version: 1
 threadsafe: false
 
-default_expiration: "1d"
+#default_expiration: "1d"
 
 builtins:
 - remote_api: on

@@ -6,6 +6,7 @@ from google.appengine.ext import db
 from google.appengine.api import memcache
 
 from models import *
+import models
 
 H = 5
 
@@ -180,10 +181,10 @@ class search(webapp.RequestHandler):
                                                                 except ValueError:
                                                                         tipo = 3
                                                                 if tipo == 1:
-                                                                        if kwresult['Enlinea'] != True:
+                                                                        if oferta.Enlinea != True:
                                                                         	validresult = False
                                                                 if tipo == 2:
-                                                                        if kwresult['Enlinea'] != False:
+                                                                        if oferta.Enlinea != False:
                                                                                 validresult = False
 
 							if validresult == True:
@@ -258,29 +259,38 @@ class generatesearch(webapp.RequestHandler):
 			errordict = {'error': -1, 'message': 'Correct use: /backend/generatesearch?kind=<str>&field=<str>[&id=<int>&value=<str>&enlinea=<int>]'}
 			self.response.out.write(json.dumps(errordict))
 		elif gid and gid != '' and gvalue and gvalue != '':
-			existsQ = SearchData.all().filter("Kind = ", kindg).filter("Sid = ",gid).filter("Field = ",field)
-			"""if genlinea:
-				existsQ.filter("Enlinea =", genlinea)"""
-			for searchdata in existsQ:
-				db.delete(searchdata)
-			values = gvalue.replace('%20',' ').replace('+',' ').replace('.',' ').replace(',',' ').split(' ')
-			"""if genlinea == 'true' or genlinea == 'True' or genlinea == '0':
-				genlinea = True
-			else:
-				genlinea = False"""
-			for value in values:
-				if len(value) > 3:
-					sd = SearchData()
-					sd.Sid = gid
-					sd.Kind = kindg
-					sd.Field = field
-					sd.Value = value.lower()
-					"""if genlinea:
-						sd.Enlinea = genlinea"""
-					if gcat:
-						sd.IdCat = int(gcat)
-					sd.FechaHora = datetime.now() - timedelta(hours = H)
-					sd.put()
+			try:
+				data = getattr(models, kindg)
+				kdata = data.get(str(gid))
+				existsQ = SearchData.all().filter("Kind = ", kindg).filter("Sid = ",gid).filter("Field = ",field)
+				"""if genlinea:
+					existsQ.filter("Enlinea =", genlinea)"""
+				for searchdata in existsQ:
+					db.delete(searchdata)
+				values = gvalue.replace('%20',' ').replace('+',' ').replace('.',' ').replace(',',' ').split(' ')
+				"""if genlinea == 'true' or genlinea == 'True' or genlinea == '0':
+					genlinea = True
+				else:
+					genlinea = False"""
+				for value in values:
+					if len(value) > 3:
+						sd = SearchData()
+						sd.Sid = gid
+						sd.Kind = kindg
+						sd.Field = field
+						sd.Value = value.lower()
+						"""if genlinea:
+							sd.Enlinea = genlinea"""
+						if gcat:
+							sd.IdCat = int(gcat)
+						sd.FechaHora = datetime.now() - timedelta(hours = H)
+						sd.put()
+			except db.BadRequestError:
+				errordict = {'error': -2, 'message': 'Inconsistency in kind/ID/value.'}
+	                        self.response.out.write(json.dumps(errordict))
+			except db.BadKeyError:
+				errordict = {'error': -2, 'message': 'Inconsistency in kind/ID/value.'}
+                                self.response.out.write(json.dumps(errordict))
 		else:
 			try:
 				kindsQ = db.GqlQuery("SELECT * FROM " + kindg)
