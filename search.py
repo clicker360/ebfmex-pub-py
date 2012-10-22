@@ -73,10 +73,10 @@ class search(webapp.RequestHandler):
 									logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
 								for estado in estados:
 									hasestado = True
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
+									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp}
 									sdlist.append(sddict)
 								if not hasestado:
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
+									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp}
        	                                                         	sdlist.append(sddict)
 							elif gkind and gkind == 'Empresa':
 								empresa = Empresa.get(sd.Sid)
@@ -123,6 +123,18 @@ class search(webapp.RequestHandler):
 											break
 								if xtrafound == False:
 									validresult = False
+
+								if gkind == 'Oferta' and tipo:
+									try:
+										tipo = int(tipo)
+									except ValueError:
+										tipo = 3
+									if tipo == 1:
+										if kwresult['Enlinea'] != True:
+											validresult = False
+									if tipo == 2:
+										if kwresult['Enlinea'] != False:
+											validresult = False
 								
 							if validresult == True:
 								nbvalidresults += 1
@@ -159,8 +171,21 @@ class search(webapp.RequestHandler):
 							if validresult == True:
 								for oft in resultslist:
 									if oft['IdOft'] == oferta.IdOft:
-										self.response.out.write(oferta.IdOft  + " already in results")
+										#self.response.out.write(oferta.IdOft  + " already in results")
 										validresult = False
+							
+							if tipo:
+                                                                try:
+                                                                        tipo = int(tipo)
+                                                                except ValueError:
+                                                                        tipo = 3
+                                                                if tipo == 1:
+                                                                        if kwresult['Enlinea'] != True:
+                                                                        	validresult = False
+                                                                if tipo == 2:
+                                                                        if kwresult['Enlinea'] != False:
+                                                                                validresult = False
+
 							if validresult == True:
 								if oferta.BlobKey:
                                                        			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())

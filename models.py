@@ -35,7 +35,7 @@ class Empresa(db.Model):
 	Benef = db.IntegerProperty()
 	PartLinea = db.IntegerProperty()
 	ExpComer = db.IntegerProperty()
-	Desc = db.TextProperty()
+	Desc = db.StringProperty(multiline=True)
 	FechaHora = db.DateTimeProperty()
 	Status = db.BooleanProperty()
 
@@ -144,3 +144,23 @@ class SearchData(db.Model):
 class OfertaEstado(db.Model):
 	IdOft = db.StringProperty()
 	IdEnt = db.StringProperty()
+
+class ShortLogo(db.Model):
+	Data = db.BlobProperty()
+        IdEmp = db.StringProperty()
+        IdImg = db.StringProperty()
+        Kind = db.StringProperty()
+        Name = db.StringProperty()
+        Desc = db.StringProperty()
+        Sizepx =  db.IntegerProperty()
+        Sizepy =  db.IntegerProperty()
+        Url = db.StringProperty()
+        Type =  db.StringProperty()
+        Sp1 = db.StringProperty()
+        Sp2 = db.StringProperty()
+        Sp3 = db.StringProperty()
+        Sp4 = db.StringProperty()
+        Np1 = db.IntegerProperty()
+        Np2 = db.IntegerProperty()
+        Np3 = db.IntegerProperty()
+        Np4 = db.IntegerProperty()

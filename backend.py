@@ -4,7 +4,7 @@ from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
 
-from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra, SearchData
+from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra, SearchData, Cta, Entidad, Municipio, ShortLogo
 from randString import randLetter, randString
 from search import generatesearch, search
 
@@ -117,6 +117,35 @@ class dummyOfertas(webapp.RequestHandler):
 					ofertapalabra.FechaHora = now
 					ofertapalabra.put()
 
+class ReporteCtas(webapp.RequestHandler):
+	def get(self):
+		ctas = Cta.all()
+
+		#self.response.headers['Content-Type'] = 'text/csv'
+		self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+		self.response.out.write("cta.Nombre,cta.Apellidos,cta.Puesto,cta.Email,cta.EmailAlt,cta.Pass,cta.Tel,cta.Cel,cta.FechaHora,cta.CodigoCfm,cta.Status,IdEmp,RFC,Nombre Empresa,Logo,Razon Social,Dir.Calle,Dir.Colonia,Dir.Entidad,Dir.Municipio,Dir.Cp,Dir.Numero Suc,Organiso Emp,Otro Organismo,Reg Org. Empresarial,Url,PartLinea,ExpComer,Descripcion,FechaHora Alta Emp.,emp.Status\n")
+
+		for cta in ctas.run(batch_size=1000000):
+			empresas = Empresa.all()
+			empresas.ancestor(cta)
+			for emp in empresas:
+				entidad = ''
+				entidades = Entidad.all().filter("CveEnt =", emp.DirEnt)
+				for ent in entidades:
+					entidad = ent.Entidad
+				municipio = ''
+				municipios = Municipio.all().filter("CveMun =", emp.DirMun)
+				for mun in municipios:
+					municipio = mun.Municipio
+				haslogo = 'no'
+				shortlogos = ShortLogo.all().filter("IdEmp =", emp.IdEmp)
+				for sl in shortlogos:
+					haslogo = 'si'
+
+				#self.response.out.write(cta.Nombre + ',' + cta.Apellidos + ',' +  cta.Puesto + ',' +  cta.Email + ',' + cta.EmailAlt + ',' + cta.Pass + ',' + cta.Tel + ',' + cta.Cel + ',' + str(cta.FechaHora) + ',' + cta.CodigoCfm + ',' + str(cta.Status) + ',' + emp.IdEmp + ',' + emp.RFC + ',' + emp.Nombre + ',' + emp.RazonSoc + ',' + emp.DirCalle + ',' + emp.DirCol + ',' + entidad + ',' + municipio + ',' + emp.DirCp + ',' + emp.NumSuc + ',' + emp.OrgEmp + ',' + emp.OrgEmpOtro + ',' + emp.OrgEmpReg + ',' + emp.Url + ',' + str(emp.PartLinea) + ',' + str(emp.ExpComer) + ',' + str(emp.Desc) + ',' + str(emp.FechaHora) + ',' + str(emp.Status) + '\n')
+
+				self.response.out.write('"' + cta.Nombre + '","' + cta.Apellidos + '","' +  cta.Puesto + '","' +  cta.Email + '","' + cta.EmailAlt + '","' + cta.Pass + '","' + cta.Tel + '","' + cta.Cel + '","' + str(cta.FechaHora) + '","' + cta.CodigoCfm + '","' + str(cta.Status) + '","' + emp.IdEmp + '","' + emp.RFC + '","' + emp.Nombre + '","' + haslogo + '","' + emp.RazonSoc + '","' + emp.DirCalle + '","' + emp.DirCol + '","' + entidad + '","' + municipio + '","' + emp.DirCp + '","' + emp.NumSuc + '","' + emp.OrgEmp + '","' + emp.OrgEmpOtro + '","' + emp.OrgEmpReg + '","' + emp.Url + '","' + str(emp.PartLinea) + '","' + str(emp.ExpComer) + '","' + str("emp.Desc").replace(u'\xf3','o').replace('\n',' ').replace('\r',' ') + '","' + str(emp.FechaHora) + '","' + str(emp.Status) + '"\n')
+
 application = webapp.WSGIApplication([
         #('/backend/migrategeo', migrateGeo),
         #('/backend/filldummy', dummyOfertas),
@@ -124,6 +153,7 @@ application = webapp.WSGIApplication([
         #('/backend/dummysucursal', dummysucursal),
         #('/backend/geogenerate', geogenerate),
 	('/backend/generatesearch', generatesearch),
+	('/backend/reportectas.csv', ReporteCtas),
         ], debug=True)
 
 def main():
