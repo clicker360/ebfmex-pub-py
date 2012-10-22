@@ -74,10 +74,10 @@ class search(webapp.RequestHandler):
 									logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
 								for estado in estados:
 									hasestado = True
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp}
+									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
 									sdlist.append(sddict)
 								if not hasestado:
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp}
+									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
        	                                                         	sdlist.append(sddict)
 							elif gkind and gkind == 'Empresa':
 								empresa = Empresa.get(sd.Sid)
@@ -108,9 +108,14 @@ class search(webapp.RequestHandler):
 								if kwresult['IdEnt'] != estado:
 									validresult = False
 							if gkind == 'Oferta':
-                                                                for result in resultslist:
-									if result['IdOft'] == kwresult['IdOft']:
-										validresult = False	
+								fechapub = datetime.strptime(kwresult['FechaHoraPub'].split('.')[0], '%Y-%m-%d %H:%M:%S')
+								if fechapub > datetime.now():
+									#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
+									validresult = False
+								else:
+	                                                                for result in resultslist:
+										if result['IdOft'] == kwresult['IdOft']:
+											validresult = False	
 							if validresult == True and nbkeywords > 1:
 								xtrafound = False
 								for kw in kwlist:
@@ -164,7 +169,10 @@ class search(webapp.RequestHandler):
                                         if nbvalidresults < batchsize:
                                                 if nbvalidresults >= batchstart:
                                                 	oferta = Oferta.get(result.Sid)
-							if estado and estado != '':
+							if oferta.FechaHoraPub > datetime.now():
+								#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
+								validresult = False
+							if validresult and estado and estado != '':
 								validresult = False
 								oeQ = OfertaEstado.all().filter("IdOft =", oferta.IdOft).filter("IdEnt =", str(estado))
 								for oe in oeQ.run(limit=1):
@@ -175,7 +183,7 @@ class search(webapp.RequestHandler):
 										#self.response.out.write(oferta.IdOft  + " already in results")
 										validresult = False
 							
-							if tipo:
+							if validresult and tipo:
                                                                 try:
                                                                         tipo = int(tipo)
                                                                 except ValueError:
