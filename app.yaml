@@ -16,7 +16,7 @@ handlers:
 
 - url: /backend/.*
   script: backend.py
-  #login: admin
+  login: admin
 
 - url: /.*
   script: main.py

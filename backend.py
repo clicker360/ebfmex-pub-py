@@ -1,12 +1,20 @@
 import datetime, random
+from datetime import datetime, timedelta
+
+from google.appengine.api import urlfetch
 
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
+from google.appengine.api import app_identity
 
-from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra, SearchData, Cta, Entidad, Municipio, ShortLogo
+from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra, SearchData, Cta, Entidad, Municipio, ShortLogo, ChangeControl
 from randString import randLetter, randString
 from search import generatesearch, search
+
+APPID = app_identity.get_default_version_hostname()
+
+urlfetch.set_default_fetch_deadline(60)
 
 class migrateGeo(webapp.RequestHandler):
 	def get(self):
@@ -117,6 +125,108 @@ class dummyOfertas(webapp.RequestHandler):
 					ofertapalabra.FechaHora = now
 					ofertapalabra.put()
 
+class UpdateSearch(webapp.RequestHandler):
+	def get(self):
+		try:
+			gminutes = self.request.get('minutes')
+			ghours = self.request.get('hours')
+			gdays = self.request.get('days')
+			if not gminutes:
+				gminutes = 0
+			else:
+				gminutes = int(gminutes)
+			if not ghours:
+				ghours = 0
+			else:
+				ghours = int(ghours)
+			if not gdays:
+				gdays = 0
+			else:
+				gdays = int(gdays)
+		except ValueError:
+			gminutes = 30
+			ghours = 0
+			gdays = 0
+		time = datetime.now() - timedelta(days = gdays, hours = ghours, minutes = gminutes)
+		self.response.headers['Content-Type'] = 'text/plain'
+
+		#self.response.out.write (str(time))
+		changecontrol = ChangeControl.all().filter("FechaHora >=", time).filter("Kind =", 'Oferta').filter("Status IN", ["A","M"])
+		for cc in changecontrol:
+			#self.response.out.write(cc.Id + '\n')
+			if cc.Status != 'B':
+				ofertas = Oferta.all().filter("IdOft =", cc.Id)
+				for oferta in ofertas:
+					if cc.Status == 'M':
+						searchdata = SearchData.all().filter("Sid =", str(oferta.key()))
+						for sd in searchdata:
+							db.delete(sd)
+					desc = oferta.Descripcion.replace('\n',' ').replace('\r',' ').replace('.',' ').replace(',',' ').split(' ')
+					nombre = oferta.Oferta.replace('.',' ').replace(',',' ').split(' ')
+					for palabra in desc:
+						if len(palabra) > 3:
+							newsd = SearchData()
+							newsd.Enlinea = oferta.Enlinea
+							newsd.FechaHora = datetime.now()
+							newsd.Field = 'Descripcion'
+							newsd.IdCat = oferta.IdCat
+							newsd.Kind = 'Oferta'
+							newsd.Sid = str(oferta.key())
+							newsd.Value = palabra.lower()
+							newsd.put()
+					for palabra in nombre:
+						if len(palabra) > 3:
+	                                                newsd = SearchData()
+       		                                        newsd.Enlinea = oferta.Enlinea
+	                                                newsd.FechaHora = datetime.now()
+	                                                newsd.Field = 'Oferta'
+	                                                newsd.IdCat = oferta.IdCat
+	                                                newsd.Kind = 'Oferta'
+	                                                newsd.Sid = str(oferta.key())
+	                                                newsd.Value = palabra.lower()
+	                                                newsd.put()
+					palabraclave = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
+					for palabra in palabraclave:
+						if len(palabra) > 3:
+							newsd = SearchData()
+	                                                newsd.Enlinea = oferta.Enlinea
+	                                                newsd.FechaHora = datetime.now()
+	                                                newsd.Field = 'OfertaPalabra'
+	                                                newsd.IdCat = oferta.IdCat
+	                                                newsd.Kind = 'Oferta'
+	                                                newsd.Sid = str(oferta.key())
+	                                                newsd.Value = palabra.Palabra.lower()
+	                                                newsd.put()
+
+class SearchInit(webapp.RequestHandler):
+        def get(self):
+		for sd in SearchData.all():
+			db.delete(sd)
+
+		appid = APPID
+		if APPID == 'ebfmex-pub.appspot.com' or APPID == 'ebfmxorg.appspot.com':
+			appid = 'movil.' + APPID
+
+                url = 'http://' + appid + '/backend/generatesearch?kind=Oferta&field=Oferta'
+		#result = urlfetch.fetch(url)
+		url = 'http://' + appid + '/backend/generatesearch?kind=Oferta&field=Descripcion'
+		#result = urlfetch.fetch(url)
+
+		self.redirect('/backend/generatesearch?kind=Oferta&field=Descripcion')
+		self.redirect('/backend/generatesearch?kind=Oferta&field=Oferta')
+
+		for oferta in Oferta.all():
+			for palabra in OfertaPalabra.all().filter("IdOft =", oferta.IdOft):
+				 newsd = SearchData()
+                                 newsd.Enlinea = oferta.Enlinea
+                                 newsd.FechaHora = datetime.now()
+                                 newsd.Field = 'OfertaPalabra'
+                                 newsd.IdCat = oferta.IdCat
+                                 newsd.Kind = 'Oferta'
+                                 newsd.Sid = str(oferta.key())
+                                 newsd.Value = palabra.Palabra.lower()
+                                 newsd.put()
+
 class ReporteCtas(webapp.RequestHandler):
 	def get(self):
 		pagina = self.request.get('pagina')
@@ -163,7 +273,9 @@ application = webapp.WSGIApplication([
         #('/backend/dummysucursal', dummysucursal),
         #('/backend/geogenerate', geogenerate),
 	('/backend/generatesearch', generatesearch),
+	('/backend/updatesearch', UpdateSearch),
 	('/backend/reportectas.csv', ReporteCtas),
+	('/backend/searchinit', SearchInit),
         ], debug=True)
 
 def main():

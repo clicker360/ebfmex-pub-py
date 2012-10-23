@@ -310,8 +310,7 @@ class generatesearch(webapp.RequestHandler):
 		else:
 			try:
 				kindsQ = db.GqlQuery("SELECT * FROM " + kindg)
-				kinds = kindsQ.run(batch_size=1000000)
-				for kind in kinds:
+				for kind in kindsQ:
 					#self.response.out.write("1")
 					values = getattr(kind, field)
 					values = values.replace('\n',' ').replace('\r',' ').replace('.',' ').replace(',',' ').split(' ')
