@@ -42,8 +42,9 @@ class search(webapp.RequestHandler):
 
                 batchstart = batchsize * (pagina - 1)
                 batchsize = batchsize * pagina
+		#self.response.out.write(str(batchsize) + " " + str(batchstart))
 
-		if keywords:
+		if keywords and keywords != '':
 			kwlist = []
 			keywordslist = keywords.replace('+',' ').replace('.',' ').replace(',',' ').replace(';',' ').split(' ')
 			for kw in keywordslist:
@@ -99,6 +100,7 @@ class search(webapp.RequestHandler):
 					nbvalidresults = 0
 
 					for kwresult in kwresults:
+						#self.response.out.write('far\n')
 						if nbvalidresults < batchsize:
 							validresult = True
 							if categoria:
@@ -142,6 +144,7 @@ class search(webapp.RequestHandler):
 										if kwresult['Enlinea'] != False:
 											validresult = False
 								
+							#self.response.out.write('Almost\n')
 							if validresult == True:
 								nbvalidresults += 1
 								if nbvalidresults >= batchstart:
@@ -156,6 +159,7 @@ class search(webapp.RequestHandler):
 				errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
 	                        self.response.out.write(json.dumps(errordict))
 		else:
+			#self.response.out.write('2')
 			sd = SearchData.all()
                         if gkind:
 	                        sd.filter("Kind =", gkind)
@@ -163,49 +167,53 @@ class search(webapp.RequestHandler):
                                 if categoria:
        		                        sd.filter("IdCat =", categoria)
                                 resultslist = []
+				truncresultslist = []
                                 nbvalidresults = 0
                                 for result in sd.order("-FechaHora").run(batch_size=1000000):
                                         validresult = True
                                         if nbvalidresults < batchsize:
-                                                if nbvalidresults >= batchstart:
-                                                	oferta = Oferta.get(result.Sid)
-							if oferta.FechaHoraPub > datetime.now():
-								#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
-								validresult = False
-							if validresult and estado and estado != '':
-								validresult = False
-								oeQ = OfertaEstado.all().filter("IdOft =", oferta.IdOft).filter("IdEnt =", str(estado))
-								for oe in oeQ.run(limit=1):
-									validresult = True
-							if validresult == True:
-								for oft in resultslist:
-									if oft['IdOft'] == oferta.IdOft:
-										#self.response.out.write(oferta.IdOft  + " already in results")
-										validresult = False
+						#self.response.out.write('far\n')
+                                               	oferta = Oferta.get(result.Sid)
+						if oferta.FechaHoraPub > datetime.now():
+							#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
+							validresult = False
+						if validresult and estado and estado != '':
+							validresult = False
+							oeQ = OfertaEstado.all().filter("IdOft =", oferta.IdOft).filter("IdEnt =", str(estado))
+							for oe in oeQ.run(limit=1):
+								validresult = True
+						if validresult == True:
+							for oft in resultslist:
+								if oft['IdOft'] == oferta.IdOft:
+									#self.response.out.write(oferta.IdOft  + ' already in results\n')
+									validresult = False
 							
-							if validresult and tipo:
-                                                                try:
-                                                                        tipo = int(tipo)
-                                                                except ValueError:
-                                                                        tipo = 3
-                                                                if tipo == 1:
-                                                                        if oferta.Enlinea != True:
-                                                                        	validresult = False
-                                                                if tipo == 2:
-                                                                        if oferta.Enlinea != False:
-                                                                                validresult = False
+						if validresult == True and tipo:
+                                                        try:
+                                                                tipo = int(tipo)
+                                                        except ValueError:
+                                                                tipo = 3
+                                                        if tipo == 1:
+                                                                if oferta.Enlinea != True:
+                                                                     	validresult = False
+                                                        if tipo == 2:
+                                                                if oferta.Enlinea != False:
+                                                                        validresult = False
 
-							if validresult == True:
-								if oferta.BlobKey:
-                                                       			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
-								else:
-									logourl = None
-	                                                        sddict = {'Key': result.Sid, 'Value': result.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
-	                                                        resultslist.append(sddict)
-								nbvalidresults += 1
+						#self.response.out.write('almost\n')
+						if validresult == True:
+							if oferta.BlobKey:
+                                              			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+							else:
+								logourl = None
+	                                                sddict = {'Key': result.Sid, 'Value': result.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
+							if nbvalidresults >= batchstart:
+								truncresultslist.append(sddict)
+		                                        resultslist.append(sddict)
+							nbvalidresults += 1
                                         else:
                                         	break
-                                self.response.out.write(json.dumps(resultslist))
+                                self.response.out.write(json.dumps(truncresultslist))
 			"""errordict = {'error': -1, 'message': 'Correct use: /search?keywords=<str>[&kind=<str>&categoria=<int>&estado=<str>&tipo=<int>]'}
                         self.response.out.write(json.dumps(errordict))"""
 

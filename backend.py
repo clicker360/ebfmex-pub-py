@@ -136,8 +136,8 @@ class ReporteCtas(webapp.RequestHandler):
 		#self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
 		self.response.out.write("cta.Nombre,cta.Apellidos,cta.Puesto,cta.Email,cta.EmailAlt,cta.Pass,cta.Tel,cta.Cel,cta.FechaHora,cta.CodigoCfm,cta.Status,IdEmp,RFC,Nombre Empresa,Logo,Razon Social,Dir.Calle,Dir.Colonia,Dir.Entidad,Dir.Municipio,Dir.Cp,Dir.Numero Suc,Organiso Emp,Otro Organismo,Reg Org. Empresarial,Url,PartLinea,ExpComer,Descripcion,FechaHora Alta Emp.,emp.Status\n")
 
-		ctas = Cta.all()
-		for cta in ctas.run(batch_size=1000000, limit=500):
+		ctas = Cta.all().order("FechaHora")
+		for cta in ctas.run(batch_size=20000, limit=500):
 			empresas = Empresa.all()
 			empresas.ancestor(cta)
 			for emp in empresas:
@@ -154,7 +154,7 @@ class ReporteCtas(webapp.RequestHandler):
 				for sl in shortlogos:
 					haslogo = 'si'
 
-			self.response.out.write('"' + cta.Nombre + '","' + cta.Apellidos + '","' +  cta.Puesto + '","' +  cta.Email + '","' + cta.EmailAlt + '","' + cta.Pass + '","' + cta.Tel + '","' + cta.Cel + '","' + str(cta.FechaHora) + '","' + cta.CodigoCfm + '","' + str(cta.Status) + '","\n')# + emp.IdEmp + '","' + emp.RFC + '","' + emp.Nombre + '","' + haslogo + '","' + emp.RazonSoc + '","' + emp.DirCalle + '","' + emp.DirCol + '","' + entidad + '","' + municipio + '","' + emp.DirCp + '","' + emp.NumSuc + '","' + emp.OrgEmp + '","' + emp.OrgEmpOtro + '","' + emp.OrgEmpReg + '","' + emp.Url + '","' + str(emp.PartLinea) + '","' + str(emp.ExpComer) + '","' + str(emp.Desc).replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n').replace('\n',' ').replace('\r',' ') + '","' + str(emp.FechaHora) + '","' + str(emp.Status) + '"\n')
+				self.response.out.write('"' + cta.Nombre + '","' + cta.Apellidos + '","' +  cta.Puesto + '","' +  cta.Email + '","' + cta.EmailAlt + '","' + cta.Pass + '","' + cta.Tel + '","' + cta.Cel + '","' + str(cta.FechaHora) + '","' + cta.CodigoCfm + '","' + str(cta.Status) + '","' + emp.IdEmp + '","' + emp.RFC + '","' + emp.Nombre + '","' + haslogo + '","' + emp.RazonSoc + '","' + emp.DirCalle + '","' + emp.DirCol + '","' + entidad + '","' + municipio + '","' + emp.DirCp + '","' + emp.NumSuc + '","' + emp.OrgEmp + '","' + emp.OrgEmpOtro + '","' + emp.OrgEmpReg + '","' + emp.Url + '","' + str(emp.PartLinea) + '","' + str(emp.ExpComer) + '","' + str(emp.Desc).replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n').replace('\n',' ').replace('\r',' ') + '","' + str(emp.FechaHora) + '","' + str(emp.Status) + '"\n')
 
 application = webapp.WSGIApplication([
         #('/backend/migrategeo', migrateGeo),
