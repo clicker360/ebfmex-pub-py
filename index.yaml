@@ -43,3 +43,9 @@ indexes:
   - name: Kind
   - name: FechaHora
     direction: desc
+
+- kind: ChangeControl
+  properties:
+  - name: Kind
+  - name: Status
+  - name: FechaHora
