@@ -1,0 +1,51 @@
+indexes:
+
+- kind: OfertaSucursal
+  properties:
+  - name: IdSuc
+  - name: IdEmp
+  - name: IdOft
+    direction: desc
+  - name: Oferta
+
+- kind: OfertaSucursal
+  properties:
+  - name: IdEmp
+  - name: IdOft
+
+- kind: Oferta
+  properties:
+  - name: IdCat
+  - name: FechaHora
+    direction: desc
+
+- kind: OfertaPalabra
+  properties:
+  - name: Palabra
+  - name: FechaHora
+    direction: desc
+
+- kind: SearchData
+  properties:
+  - name: Value
+  - name: FechaHora
+    direction: desc
+
+- kind: SearchData
+  properties:
+  - name: Kind
+  - name: Value
+  - name: FechaHora
+    direction: desc
+
+- kind: SearchData
+  properties:
+  - name: Kind
+  - name: FechaHora
+    direction: desc
+
+- kind: ChangeControl
+  properties:
+  - name: Kind
+  - name: Status
+  - name: FechaHora

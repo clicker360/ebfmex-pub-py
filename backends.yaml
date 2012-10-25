@@ -1,0 +1,4 @@
+backends:
+- name: generatesearch
+  options: dynamic
+  start: be.app
