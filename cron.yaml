@@ -1,0 +1,4 @@
+cron:
+- description: Agregar modificaciones de ofertar al motor de busquedas
+  url: /backend/updatesearch
+  schedule: every 30 minutes synchronized
