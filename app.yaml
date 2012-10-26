@@ -14,6 +14,18 @@ handlers:
   script: backend.py
   #login: admin
 
+- url: /backend/gensearch
+  script: backend.py
+  login: admin
+
+- url: /backend/searchinit
+  script: backend.py
+  login: admin
+
+- url: /backend/sit
+  script: backend.py
+  login: admin
+
 - url: /backend/.*
   script: backend.py
 #  login: admin

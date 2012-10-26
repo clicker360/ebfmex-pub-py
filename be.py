@@ -10,8 +10,8 @@ import models
 
 H = 5
 
-class generatesearch(webapp.RequestHandler):
-        def get(self):
+class gensearch(webapp.RequestHandler):
+        def post(self):
                 kindg = self.request.get('kind')
                 field = self.request.get('field')
                 gid = self.request.get('id')
@@ -89,8 +89,8 @@ class generatesearch(webapp.RequestHandler):
                                 errordict = {'error': -2, 'message': 'Kind ' + kindg+ ' doesn\'t have any attribute ' + field + '. Careful it is case sensitive.'}
                                 self.response.out.write(json.dumps(errordict))
 
-if __name__ == '__main__':
+"""if __name__ == '__main__':
     _handlers = [
 	(r'/_ah/start', generatesearch),
 	, debug=True]
-    run_wsgi_app(webapp.WSGIApplication(_handlers))
+    run_wsgi_app(webapp.WSGIApplication(_handlers))"""

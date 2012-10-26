@@ -15,6 +15,7 @@ from google.appengine.api import app_identity
 from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaPalabra, SearchData, Cta, Entidad, Municipio, ShortLogo, ChangeControl
 from randString import randLetter, randString
 from search import generatesearch, search
+from be import gensearch
 
 APPID = app_identity.get_default_version_hostname()
 
@@ -130,7 +131,7 @@ class dummyOfertas(webapp.RequestHandler):
 					ofertapalabra.put()
 
 class UpdateSearch(webapp.RequestHandler):
-	def get(self):
+	def token(self):
 		token = self.request.get('token')
 		if token and str(token) == 'ZWJmbWV4LXB1YnIeCxISX0FoQWRtaW5Yc3JmVG9rZW5fIgZfWFNSRl8M':
 			try:
@@ -243,14 +244,42 @@ class SearchInit(webapp.RequestHandler):
                                  newsd.Value = palabra.Palabra.lower()
                                  newsd.put()
 
-def do_something_in_transaction():
-	taskqueue.add(url='/backend/generatesearch?', params={'kind': 'Oferta', 'field': 'Descripcion'})
-	taskqueue.add(url='/backend/generatesearch?', params={'kind': 'Oferta', 'field': 'Oferta'})
+def gensearch_tr():
+	taskqueue.add(url='/backend/gensearch?', params={'kind': 'Oferta', 'field': 'Descripcion'})
+	taskqueue.add(url='/backend/gensearch?', params={'kind': 'Oferta', 'field': 'Oferta'})
 	taskqueue.add(url='/backend/searchinit')
+
+def updatesearch_tr(token, days, hours, minutes):
+	taskqueue.add(url='/backend/updatesearch', params={'token': token, 'days': days, 'hours': hours, 'minutes': minutes})
 
 class SearchInitTask(webapp.RequestHandler):
         def get(self):
-                db.run_in_transaction(do_something_in_transaction)
+                db.run_in_transaction(gensearch_tr)
+
+class UpdateSearchTask(webapp.RequestHandler):
+        def get(self):
+		try:
+			token = self.request.get('token')
+	                gminutes = self.request.get('minutes')
+                        ghours = self.request.get('hours')
+                        gdays = self.request.get('days')
+                        if not gminutes:
+	                        gminutes = 0
+                        else:
+                                gminutes = int(gminutes)
+                        if not ghours:
+                                ghours = 0
+                        else:
+                                ghours = int(ghours)
+                        if not gdays:
+                                gdays = 0
+                        else:
+                                gdays = int(gdays)
+		except ValueError:
+                        gminutes = 30
+                        ghours = 0
+                        gdays = 0
+                db.run_in_transaction(updatesearch_tr(token, gdays, ghours, gminutes))
 
 class ReporteCtas(webapp.RequestHandler):
 	def get(self):
@@ -299,9 +328,11 @@ application = webapp.WSGIApplication([
         #('/backend/geogenerate', geogenerate),
 	('/backend/generatesearch', generatesearch),
 	('/backend/updatesearch', UpdateSearch),
-	('/backend/reportectas.csv', ReporteCtas),
+	#('/backend/reportectas.csv', ReporteCtas),
 	('/backend/searchinit', SearchInit),
+	('/backend/gensearch', gensearch),
 	('/backend/sit', SearchInitTask),
+	('/backend/ust', UpdateSearchTask),
         ], debug=True)
 
 def main():

@@ -270,7 +270,7 @@ class searchds(webapp.RequestHandler):
 				self.response.out.write(json.dumps(errordict))
 
 class generatesearch(webapp.RequestHandler):
-	def post(self):
+	def get(self):
 		kindg = self.request.get('kind')
 		field = self.request.get('field')
 		gid = self.request.get('id')
