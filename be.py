@@ -57,7 +57,22 @@ class gensearch(webapp.RequestHandler):
                                 self.response.out.write(json.dumps(errordict))
                 else:
                         try:
-                                kindsQ = db.GqlQuery("SELECT * FROM " + kindg)
+				split = self.request.get('split')
+                                if split:
+                                        batchsize = self.request.get('batchsize')
+                                        if not batchsize:
+                                                batchsize = 100
+                                        else:
+                                                batchsize = int(batchsize)
+                                        batchnumber = self.request.get('batchnumber')
+                                        if not batchnumber:
+                                                batchnumber = 0
+                                        else:
+                                                batchnumber = int(batchnumber)
+                                        offset = batchnumber * batchsize
+                                        kindsQ = db.GqlQuery("SELECT * FROM " + kindg)[offset:offset + batchsize]
+                                else:
+                                        kindsQ = db.GqlQuery("SELECT * FROM " + kindg)
                                 for kind in kindsQ:
                                         #self.response.out.write("1")
                                         values = getattr(kind, field)

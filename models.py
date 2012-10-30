@@ -92,7 +92,7 @@ class Oferta(db.Model):
 	Promocion = db.StringProperty()
 	Enlinea = db.BooleanProperty()
 	Url = db.StringProperty()
-	Tarjetas = db.BlobProperty()
+	Tarjetas = db.StringProperty()
 	Meses = db.StringProperty()
 	FechaHoraPub = db.DateTimeProperty()
 	StatusPub = db.BooleanProperty()

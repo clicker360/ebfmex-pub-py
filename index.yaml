@@ -49,3 +49,10 @@ indexes:
   - name: Kind
   - name: Status
   - name: FechaHora
+
+- kind: SearchData
+  properties:
+  - name: IdCat
+  - name: Kind
+  - name: FechaHora
+    direction: desc

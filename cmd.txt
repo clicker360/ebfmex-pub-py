@@ -1,0 +1,20 @@
+###### Count distinct id in SearchData ######
+from models import SearchData
+
+sdlist = []
+count = 0
+for sd in SearchData.all():
+	exists = False
+	for oid in sdlist:
+		if oid == sd.Sid:
+			exists = True
+	if exists == False:
+		sdlist.append(sd.Sid)	
+		count += 1
+print(count)
+
+###### Truncate SearchData ######
+from models import SearchData
+
+for sd in SearchData.all():
+	db.delete(sd)

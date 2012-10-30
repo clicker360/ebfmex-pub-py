@@ -1,4 +1,4 @@
-application: ebfmex-pub
+application: ebfmxorg
 version: movil
 runtime: python27
 api_version: 1
@@ -23,6 +23,10 @@ handlers:
   login: admin
 
 - url: /backend/sit
+  script: backend.py
+  login: admin
+
+- url: /backend/countsids
   script: backend.py
   login: admin
 

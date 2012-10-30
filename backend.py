@@ -21,6 +21,8 @@ APPID = app_identity.get_default_version_hostname()
 
 urlfetch.set_default_fetch_deadline(60)
 
+H = 6
+
 class migrateGeo(webapp.RequestHandler):
 	def get(self):
 		sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
@@ -177,7 +179,7 @@ class UpdateSearch(webapp.RequestHandler):
 							if len(palabra) > 3:
 								newsd = SearchData()
 								newsd.Enlinea = oferta.Enlinea
-								newsd.FechaHora = datetime.now()
+								newsd.FechaHora = datetime.now() - timedelta(hours = H)
 								newsd.Field = 'Descripcion'
 								newsd.IdCat = oferta.IdCat
 								newsd.Kind = 'Oferta'
@@ -189,7 +191,7 @@ class UpdateSearch(webapp.RequestHandler):
 							if len(palabra) > 3:
 		                                                newsd = SearchData()
        			                                        newsd.Enlinea = oferta.Enlinea
-		                                                newsd.FechaHora = datetime.now()
+		                                                newsd.FechaHora = datetime.now() - timedelta(hours = H)
 		                                                newsd.Field = 'Oferta'
 		                                                newsd.IdCat = oferta.IdCat
 		                                                newsd.Kind = 'Oferta'
@@ -202,7 +204,7 @@ class UpdateSearch(webapp.RequestHandler):
 							if len(palabra) > 3:
 								newsd = SearchData()
 		                                                newsd.Enlinea = oferta.Enlinea
-		                                                newsd.FechaHora = datetime.now()
+		                                                newsd.FechaHora = datetime.now() - timedelta(hours = H)
 		                                                newsd.Field = 'OfertaPalabra'
 		                                                newsd.IdCat = oferta.IdCat
 		                                                newsd.Kind = 'Oferta'
@@ -236,7 +238,7 @@ class SearchInit(webapp.RequestHandler):
 			for palabra in OfertaPalabra.all().filter("IdOft =", oferta.IdOft):
 				 newsd = SearchData()
                                  newsd.Enlinea = oferta.Enlinea
-                                 newsd.FechaHora = datetime.now()
+                                 newsd.FechaHora = datetime.now() - timedelta(hours = H)
                                  newsd.Field = 'OfertaPalabra'
                                  newsd.IdCat = oferta.IdCat
                                  newsd.Kind = 'Oferta'
@@ -245,16 +247,48 @@ class SearchInit(webapp.RequestHandler):
                                  newsd.put()
 
 def gensearch_tr():
-	taskqueue.add(url='/backend/gensearch?', params={'kind': 'Oferta', 'field': 'Descripcion'})
-	taskqueue.add(url='/backend/gensearch?', params={'kind': 'Oferta', 'field': 'Oferta'})
+	nbofertas = Oferta.all().count()
+	batchsize = 10
+	batchnumber = 0
+	while nbofertas >= 0:
+		taskqueue.add(url='/backend/gensearch', params={'kind': 'Oferta', 'field': 'Descripcion', 'batchsize': batchsize, 'batchnumber': batchnumber})
+		taskqueue.add(url='/backend/gensearch', params={'kind': 'Oferta', 'field': 'Oferta', 'batchsize': batchsize, 'batchnumber': batchnumber})
+		nbofertas -= batchsize
+		batchnumber += 1
 	taskqueue.add(url='/backend/searchinit')
+	logging.info(str(nbofertas) + ' ofertas. Batch size: ' + str(batchsize) + '. Done queueing.')
 
 def updatesearch_tr(token, days, hours, minutes):
 	taskqueue.add(url='/backend/updatesearch', params={'token': token, 'days': days, 'hours': hours, 'minutes': minutes})
 
 class SearchInitTask(webapp.RequestHandler):
         def get(self):
-                db.run_in_transaction(gensearch_tr)
+                #db.run_in_transaction(gensearch_tr)
+		#gensearch_tr
+		nbofertas = Oferta.all().count()
+	        batchsize = 10
+	        batchnumber = 0
+		logging.info(str(nbofertas) + ' ofertas. Batch size: ' + str(batchsize) + '. Queueing.')
+	        while nbofertas >= 0:
+	                taskqueue.add(url='/backend/gensearch', params={'kind': 'Oferta', 'field': 'Descripcion', 'batchsize': batchsize, 'batchnumber': batchnumber})
+	                taskqueue.add(url='/backend/gensearch', params={'kind': 'Oferta', 'field': 'Oferta', 'batchsize': batchsize, 'batchnumber': batchnumber})
+	                nbofertas -= batchsize
+	                batchnumber += 1
+	        taskqueue.add(url='/backend/searchinit')
+
+class CountSids(webapp.RequestHandler):
+	def get(self):
+		sdlist = []
+		count = 0
+		for sd in SearchData.all():
+			exists = False
+			for oid in sdlist:
+				if oid == sd.Sid:
+					exists = True
+			if exists == False:
+				sdlist.append(sd.Sid)	
+				count += 1
+		self.response.out.write(count)
 
 class UpdateSearchTask(webapp.RequestHandler):
         def get(self):
@@ -263,6 +297,8 @@ class UpdateSearchTask(webapp.RequestHandler):
 	                gminutes = self.request.get('minutes')
                         ghours = self.request.get('hours')
                         gdays = self.request.get('days')
+			if not token:
+				token = ''
                         if not gminutes:
 	                        gminutes = 0
                         else:
@@ -276,10 +312,12 @@ class UpdateSearchTask(webapp.RequestHandler):
                         else:
                                 gdays = int(gdays)
 		except ValueError:
+			token = ''
                         gminutes = 30
                         ghours = 0
                         gdays = 0
-                db.run_in_transaction(updatesearch_tr(token, gdays, ghours, gminutes))
+                #db.run_in_transaction(updatesearch_tr(token, gdays, ghours, gminutes))
+		taskqueue.add(url='/backend/updatesearch', params={'token': token, 'days': gdays, 'hours': ghours, 'minutes': gminutes})
 
 class ReporteCtas(webapp.RequestHandler):
 	def get(self):
@@ -333,6 +371,7 @@ application = webapp.WSGIApplication([
 	('/backend/gensearch', gensearch),
 	('/backend/sit', SearchInitTask),
 	('/backend/ust', UpdateSearchTask),
+	('/backend/countsids', CountSids),
         ], debug=True)
 
 def main():

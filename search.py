@@ -9,7 +9,7 @@ from google.appengine.api import memcache
 from models import *
 import models
 
-H = 5
+H = 6
 
 class search(webapp.RequestHandler):
 	def get(self):
@@ -89,7 +89,7 @@ class search(webapp.RequestHandler):
 							else:
 								sddict = {'Sid': sd.Sid, 'Kind': sd.Kind, 'Field': sd.Field, 'Value': sd.Value}
 								sdlist.append(sddict)
-						memcache.add(kw, json.dumps(sdlist))
+						memcache.add(kw, json.dumps(sdlist), 3600)
 
 				for attempt in range(20):
 					kwcache = memcache.get(kwlist[0])
@@ -219,7 +219,8 @@ class search(webapp.RequestHandler):
 							pass
                                         else:
                                         	break
-				logging.error('Ofertas keys not found: ' + str(onotfound) + '.')
+				if onotfound > 0:
+					logging.error('Ofertas keys not found: ' + str(onotfound) + '.')
                                 self.response.out.write(json.dumps(truncresultslist))
 			"""errordict = {'error': -1, 'message': 'Correct use: /search?keywords=<str>[&kind=<str>&categoria=<int>&estado=<str>&tipo=<int>]'}
                         self.response.out.write(json.dumps(errordict))"""
@@ -316,7 +317,22 @@ class generatesearch(webapp.RequestHandler):
                                 self.response.out.write(json.dumps(errordict))
 		else:
 			try:
-				kindsQ = db.GqlQuery("SELECT * FROM " + kindg)
+				split = self.request.get('split')
+				if split:
+					batchsize = self.request.get('batchsize')
+					if not batchsize:
+						batchsize = 100
+					else:
+						batchsize = int(batchsize)
+					batchnumber = self.request.get('batchnumber')
+					if not batchnumber:
+						batchnumber = 0
+					else:
+						batchnumber = int(batchnumber)
+					offset = batchnumber * batchsize
+					kindsQ = db.GqlQuery("SELECT * FROM " + kindg + " ORDER BY FechaHora DESC")[offset:offset + batchsize]
+				else:
+					kindsQ = db.GqlQuery("SELECT * FROM " + kindg)
 				for kind in kindsQ:
 					#self.response.out.write("1")
 					values = getattr(kind, field)
