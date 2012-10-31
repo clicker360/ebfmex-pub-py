@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 from google.appengine.api import app_identity
+from google.appengine.api import memcache
 
 from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria
 from randString import randLetter, randString
@@ -14,28 +15,45 @@ APPID = app_identity.get_default_version_hostname()
 
 def randOffer(nb,empresa=None):
 	numoffer = 0
-	offerlist = []
-	deadline = 52
-	while numoffer < nb and deadline > 0:
-		letter = randLetter()
-		ofertasQ = None
-		if empresa == None:
-			ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft >= :1 AND IdOft < :2", letter, letter + u"\ufffd")
-		else:
-			ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdEmp = :3 AND IdOft >= :1 AND IdOft < :2", letter, letter + u"\ufffd", empresa)
-		ofertas = ofertasQ.fetch(nb)
-		if ofertas:
-			for oferta in ofertas:
-				offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.Lat, 'long': oferta.Lng, 'url_logo': 'http://' + APPID + '/ofimg?id=' + oferta.IdOft}
-				offerlist.append(offerdict)
-				numoffer += 1
-		else:
+	deadline = 50
+	randoffer = memcache.get('randoffer')
+	if randoffer is None:
+		offerlist = []
+		while len(offerlist) < 250 and deadline > 0:
+			letter = randLetter()
+			ofertas = OfertaSucursal.all().filter("IdOft >=", letter).filter("IdOft <", letter + u"\ufffd")
+			if ofertas:
+				for oferta in ofertas:
+					exists = False
+					for oft in offerlist:
+						if oferta.IdOft == oft['id']:
+							exists = True
+					if exists == False:
+						offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.Lat, 'long': oferta.Lng, 'url_logo': 'http://' + APPID + '/ofimg?id=' + oferta.IdOft, 'IdEmp': oferta.IdEmp}
+						offerlist.append(offerdict)
 			deadline -= 1
-	if deadline == 0:
-		errordict = []
-		return errordict
+		memcache.add('randoffer', offerlist, 30)
+
+	for i in range(10):
+		randoffer = memcache.get('randoffer')
+		if randoffer is not None:
+			break
+	if randoffer is None:
+		return []
 	else:
-		return offerlist
+		returnlist = []
+		for oferta in randoffer:
+			if numoffer < nb:
+				valid = True
+				if empresa and empresa is not None:
+					if oferta['IdEmp'] != empresa:
+						valid = False
+				if valid:
+					returnlist.append(oferta)
+					numoffer += 1
+			else:
+				break
+		return returnlist
 
 class sucursales(webapp.RequestHandler):
 	def get(self):

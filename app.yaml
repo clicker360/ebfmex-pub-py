@@ -30,9 +30,13 @@ handlers:
   script: backend.py
   login: admin
 
+- url: /backend/countofertas
+  script: backend.py
+  login: admin
+
 - url: /backend/.*
   script: backend.py
-#  login: admin
+  login: admin
 
 - url: /.*
   script: main.py

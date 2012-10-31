@@ -20,7 +20,7 @@ class search(webapp.RequestHandler):
 		tipo = self.request.get('tipo')
 		batchsize = self.request.get('batchsize')
 		pagina = self.request.get('pagina')
-		self.response.headers['Content-Type'] = 'text/plain'
+		self.response.headers['Content-Type'] = 'application/json'
 		self.response.headers.add_header("Access-Control-Allow-Origin", "*")
 		if pagina:
                 	try:
@@ -230,7 +230,7 @@ class searchds(webapp.RequestHandler):
 		gvalue = self.request.get('value')
 		gfield = self.request.get('field')
 		gkind = self.request.get('kind')
-		self.response.headers['Content-Type'] = 'text/plain'
+		self.response.headers['Content-Type'] = 'application/json'
 		if not gvalue or gvalue == '':
 			errordict = {'error': -1, 'message': 'Correct use: /searchds?value=<str>[&kind=<str>&field=<str>]'}
                         self.response.out.write(json.dumps(errordict))
@@ -278,7 +278,7 @@ class generatesearch(webapp.RequestHandler):
 		gvalue = self.request.get('value')
 		#genlinea = self.request.get('enlinea')
 		gcat = self.request.get('categoria')
-		self.response.headers['Content-Type'] = 'text/plain'
+		self.response.headers['Content-Type'] = 'application/json'
 		if not kindg or not field or kindg == '' or field == '':
 			errordict = {'error': -1, 'message': 'Correct use: /backend/generatesearch?kind=<str>&field=<str>[&id=<int>&value=<str>&enlinea=<int>]'}
 			self.response.out.write(json.dumps(errordict))
@@ -369,7 +369,7 @@ class SearchKeyword(webapp.RequestHandler):
 		keyword = self.request.get('keyword')
 		results = self.request.get('results')
 		page = self.request.get('page')
-                self.response.headers['Content-Type'] = 'text/plain'
+                self.response.headers['Content-Type'] = 'application/json'
                 if not keyword or not results or not page:
                         errordict = {'error': -1,'message': 'Correct use: /search/keyword?keyword=<str>&results=<int>[&page=<int>'}
                         self.response.out.write(json.dumps(errordict))

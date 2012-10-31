@@ -157,7 +157,7 @@ class UpdateSearch(webapp.RequestHandler):
 				ghours = 0
 				gdays = 0
 			time = datetime.now() - timedelta(days = gdays, hours = ghours, minutes = gminutes)
-			self.response.headers['Content-Type'] = 'text/plain'
+			self.response.headers['Content-Type'] = 'application/json'
 
 			#self.response.out.write (str(time))
 			changecontrol = ChangeControl.all().filter("FechaHora >=", time).filter("Kind =", 'Oferta').filter("Status IN", ["A","M"])
@@ -266,12 +266,12 @@ class SearchInitTask(webapp.RequestHandler):
                 #db.run_in_transaction(gensearch_tr)
 		#gensearch_tr
 		nbofertas = Oferta.all().count()
-	        batchsize = 10
+	        batchsize = 50
 	        batchnumber = 0
 		logging.info(str(nbofertas) + ' ofertas. Batch size: ' + str(batchsize) + '. Queueing.')
 	        while nbofertas >= 0:
-	                taskqueue.add(url='/backend/gensearch', params={'kind': 'Oferta', 'field': 'Descripcion', 'batchsize': batchsize, 'batchnumber': batchnumber})
-	                taskqueue.add(url='/backend/gensearch', params={'kind': 'Oferta', 'field': 'Oferta', 'batchsize': batchsize, 'batchnumber': batchnumber})
+	                taskqueue.add(url='/backend/gensearch', params={'split': 1, 'kind': 'Oferta', 'field': 'Descripcion', 'batchsize': batchsize, 'batchnumber': batchnumber})
+	                taskqueue.add(url='/backend/gensearch', params={'split': 1, 'kind': 'Oferta', 'field': 'Oferta', 'batchsize': batchsize, 'batchnumber': batchnumber})
 	                nbofertas -= batchsize
 	                batchnumber += 1
 	        taskqueue.add(url='/backend/searchinit')
@@ -289,6 +289,14 @@ class CountSids(webapp.RequestHandler):
 				sdlist.append(sd.Sid)	
 				count += 1
 		self.response.out.write(count)
+
+class CountOfertas(webapp.RequestHandler):
+        def get(self):
+                olist = []
+                count = 0
+                for o in Oferta.all():
+                	count += 1
+                self.response.out.write(count)
 
 class UpdateSearchTask(webapp.RequestHandler):
         def get(self):
@@ -335,7 +343,7 @@ class ReporteCtas(webapp.RequestHandler):
 			offset = batchsize * pagina
 
 		self.response.headers['Content-Type'] = 'text/csv'
-		#self.response.headers['Content-Type'] = 'text/plain; charset=utf-8'
+		#self.response.headers['Content-Type'] = 'application/json; charset=utf-8'
 		self.response.out.write("cta.Nombre,cta.Apellidos,cta.Puesto,cta.Email,cta.EmailAlt,cta.Pass,cta.Tel,cta.Cel,cta.FechaHora,cta.CodigoCfm,cta.Status,IdEmp,RFC,Nombre Empresa,Logo,Razon Social,Dir.Calle,Dir.Colonia,Dir.Entidad,Dir.Municipio,Dir.Cp,Dir.Numero Suc,Organiso Emp,Otro Organismo,Reg Org. Empresarial,Url,PartLinea,ExpComer,Descripcion,FechaHora Alta Emp.,emp.Status\n")
 
 		ctas = Cta.all().order("FechaHora")
@@ -364,14 +372,15 @@ application = webapp.WSGIApplication([
         #('/backend/cleandummy', cleandummy),
         #('/backend/dummysucursal', dummysucursal),
         #('/backend/geogenerate', geogenerate),
-	('/backend/generatesearch', generatesearch),
-	('/backend/updatesearch', UpdateSearch),
+	#('/backend/generatesearch', generatesearch),
+	#('/backend/updatesearch', UpdateSearch),
 	#('/backend/reportectas.csv', ReporteCtas),
-	('/backend/searchinit', SearchInit),
-	('/backend/gensearch', gensearch),
-	('/backend/sit', SearchInitTask),
-	('/backend/ust', UpdateSearchTask),
-	('/backend/countsids', CountSids),
+	#('/backend/searchinit', SearchInit),
+	#('/backend/gensearch', gensearch),
+	#('/backend/sit', SearchInitTask),
+	#('/backend/ust', UpdateSearchTask),
+	#('/backend/countsids', CountSids),
+	#('/backend/countofertas', CountOfertas),
         ], debug=True)
 
 def main():
