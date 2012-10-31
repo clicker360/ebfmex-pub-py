@@ -20,6 +20,7 @@ class search(webapp.RequestHandler):
 		tipo = self.request.get('tipo')
 		batchsize = self.request.get('batchsize')
 		pagina = self.request.get('pagina')
+		callback = self.request.get('callback')
 		self.response.headers['Content-Type'] = 'application/json'
 		self.response.headers.add_header("Access-Control-Allow-Origin", "*")
 		if pagina:
@@ -152,7 +153,7 @@ class search(webapp.RequestHandler):
 									resultslist.append(kwresult)
 						else:
 							break
-					self.response.out.write(json.dumps(resultslist))
+					self.response.out.write(callback + '(' + json.dumps(resultslist) + ')')
 				else:
 					errordict = {'error': -2, 'message': 'Deadline of cache writing intents reached. Couldn\'t write cache'}
 	                                self.response.out.write(json.dumps(errordict))
@@ -221,7 +222,7 @@ class search(webapp.RequestHandler):
                                         	break
 				if onotfound > 0:
 					logging.error('Ofertas keys not found: ' + str(onotfound) + '.')
-                                self.response.out.write(json.dumps(truncresultslist))
+                                self.response.out.write(callback + '(' + json.dumps(truncresultslist) + ')')
 			"""errordict = {'error': -1, 'message': 'Correct use: /search?keywords=<str>[&kind=<str>&categoria=<int>&estado=<str>&tipo=<int>]'}
                         self.response.out.write(json.dumps(errordict))"""
 

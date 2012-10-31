@@ -32,7 +32,7 @@ def randOffer(nb,empresa=None):
 						offerdict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'lat': oferta.Lat, 'long': oferta.Lng, 'url_logo': 'http://' + APPID + '/ofimg?id=' + oferta.IdOft, 'IdEmp': oferta.IdEmp}
 						offerlist.append(offerdict)
 			deadline -= 1
-		memcache.add('randoffer', offerlist, 30)
+		memcache.add('randoffer', offerlist, 1800)
 
 	for i in range(10):
 		randoffer = memcache.get('randoffer')
@@ -68,7 +68,9 @@ class sucursales(webapp.RequestHandler):
                         self.response.out.write(json.dumps(errordict))
 		else:
 			try:
+				fechastr = timestamp[0:8]
 				timestamp = datetime.strptime(timestamp,'%Y%m%d%H')
+				timestampdia = datetime.strptime(fechastr, '%Y%m%d')
 				horas = int(horas)
 				timestampend = timestamp + timedelta(hours = horas)
 			except ValueError:
@@ -78,71 +80,89 @@ class sucursales(webapp.RequestHandler):
 				errordict = {'error': -2, 'message': 'Horas must be <= 24'}
 				self.response.out.write(json.dumps(errordict))
 			else:
-				#sucursales = Sucursal.all()
-				#self.response.out.write(str(timestamp) + ' - ' + str(timestampend))
-				#timestamp += timedelta(hours = 5)
-				#timestampend += timedelta(hours = 5)
-				sucursales = Sucursal.all().filter("FechaHora >=", timestamp).filter("FechaHora <=", timestampend)
-				#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
-				#sucursales = sucursalesQ.fetch(250)
 				self.response.headers['Content-Type'] = 'text/plain'
-				outputlist = []
-				for sucursal in sucursales:
-					sucdict = {}
-					sucdict['id'] = sucursal.IdSuc
-					sucdict['nombre'] = sucursal.Nombre
-					ent = None
-					entidades = Entidad.all().filter("CveEnt =", sucursal.DirEnt)
-					for entidad in entidades:
-						ent = entidad.Entidad
-					mun = None
-					municipios = Municipio.all().filter("CveEnt =", sucursal.DirEnt).filter("CveMun =", sucursal.DirMun)
-					for municipio in municipios:
-						mun = municipio.Municipio
-					sucdict['direccion'] = {'calle': sucursal.DirCalle, 'colonia': sucursal.DirCol, 'cp': sucursal.DirCp,'entidad_id': sucursal.DirEnt, 'entidad': ent,'municipio_id': sucursal.DirMun, 'municipio': mun}
-					sucdict['logo'] = None
-					sucdict['lat'] = sucursal.Geo1
-					sucdict['long'] = sucursal.Geo2
-					empresaQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", sucursal.IdEmp)
-					empresas = empresaQ.fetch(1)
-					empresadict = {}
-					for empresa in empresas:
-						empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
-					sucdict['empresa'] = empresadict
-					ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc)
-					ofertaslist = []
-					for oferta in ofertas:
-						ofertadict = {}
-						ofertadict['id'] = oferta.IdOft
-						ofertadict['oferta'] = oferta.Oferta
-						ofertadict['descripcion'] = oferta.Descripcion
-						ofertadict['descuento'] = oferta.Descuento
-						ofertadict['promocion'] = oferta.Promocion
-						ofertadict['enlinea'] = oferta.Enlinea
-						#ofertadict['categoria'] = oferta.IdCat
-						ofertadict['precio'] = oferta.Precio
-						ofertadict['url'] = oferta.Url
-						ofertadict['url_logo'] = 'http://' + APPID + '/ofimg?id=' + oferta.IdOft
-						palabraslist = []
-						palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
-						for palabra in palabras:
-							palabraslist.append(palabra.Palabra)
-						ofertadict['palabras'] = palabraslist
-						cat = None
-						# CATEGORIA -temporal-
-						idcat = None
-						ofts = Oferta.all().filter("IdOft =", oferta.IdOft)
-						for oft in ofts:
-							idcat = oft.IdCat
-						categorias = Categoria.all().filter("IdCat =", idcat)
-						for categoria in categorias:
-							cat = categoria.Categoria
-						ofertadict['categoria_id'] = idcat
-						ofertadict['categoria'] = cat
-						ofertaslist.append(ofertadict)
-					sucdict['ofertas'] = ofertaslist
-					outputlist.append(sucdict)
-				self.response.out.write(json.dumps(outputlist))
+
+				suclist = memcache.get('wssucursales-' + fechastr)
+				if suclist is None:
+					outputlist = []
+					sucursales = Sucursal.all().filter("FechaHora >=", timestampdia).filter("FechaHora <", timestampdia + timedelta(days = 1))
+					for sucursal in sucursales:
+						sucdict = {}
+						sucdict['id'] = sucursal.IdSuc
+						sucdict['nombre'] = sucursal.Nombre
+						ent = None
+						entidades = Entidad.all().filter("CveEnt =", sucursal.DirEnt)
+						for entidad in entidades:
+							ent = entidad.Entidad
+						mun = None
+						municipios = Municipio.all().filter("CveEnt =", sucursal.DirEnt).filter("CveMun =", sucursal.DirMun)
+						for municipio in municipios:
+							mun = municipio.Municipio
+						sucdict['direccion'] = {'calle': sucursal.DirCalle, 'colonia': sucursal.DirCol, 'cp': sucursal.DirCp,'entidad_id': sucursal.DirEnt, 'entidad': ent,'municipio_id': sucursal.DirMun, 'municipio': mun}
+						sucdict['logo'] = None
+						sucdict['lat'] = sucursal.Geo1
+						sucdict['long'] = sucursal.Geo2
+						empresaQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", sucursal.IdEmp)
+						empresas = empresaQ.fetch(1)
+						empresadict = {}
+						for empresa in empresas:
+							empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
+						sucdict['empresa'] = empresadict
+						ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc)
+						ofertaslist = []
+						for oferta in ofertas:
+							ofertadict = {}
+							ofertadict['id'] = oferta.IdOft
+							ofertadict['oferta'] = oferta.Oferta
+							ofertadict['descripcion'] = oferta.Descripcion
+							ofertadict['descuento'] = oferta.Descuento
+							ofertadict['promocion'] = oferta.Promocion
+							ofertadict['enlinea'] = oferta.Enlinea
+							#ofertadict['categoria'] = oferta.IdCat
+							ofertadict['precio'] = oferta.Precio
+							ofertadict['url'] = oferta.Url
+							ofertadict['url_logo'] = 'http://' + APPID + '/ofimg?id=' + oferta.IdOft
+							palabraslist = []
+							palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
+							for palabra in palabras:
+								palabraslist.append(palabra.Palabra)
+							ofertadict['palabras'] = palabraslist
+							cat = None
+							# CATEGORIA -temporal-
+							idcat = None
+							ofts = Oferta.all().filter("IdOft =", oferta.IdOft)
+							for oft in ofts:
+								idcat = oft.IdCat
+							categorias = Categoria.all().filter("IdCat =", idcat)
+							for categoria in categorias:
+								cat = categoria.Categoria
+							ofertadict['categoria_id'] = idcat
+							ofertadict['categoria'] = cat
+							ofertaslist.append(ofertadict)
+						sucdict['ofertas'] = ofertaslist
+						sucdict['timestamp'] = str(sucursal.FechaHora)
+						outputlist.append(sucdict)
+					memcache.add('wssucursales-' + fechastr, outputlist, 3600)
+
+				attempts = 10
+				nbattempt = 0
+				for attempt in range(attempts):
+					suclist = memcache.get('wssucursales-' + fechastr)
+					if suclist is not None:
+						break
+
+				if suclist is None:
+					self.response.out.write(json.dumps([]))
+				else:
+					outputlist = []
+					for suc in suclist:
+						valid = False
+						suctimestamp = datetime.strptime(suc['timestamp'].split('.')[0], '%Y-%m-%d %H:%M:%S')
+						if timestamp <= suctimestamp and suctimestamp <= timestampend:
+							valid = True
+						if valid == True:
+							outputlist.append(suc)
+					self.response.out.write(json.dumps(outputlist))
 
 class wsoferta(webapp.RequestHandler):
         def get(self):
@@ -419,19 +439,33 @@ class wsempresas(webapp.RequestHandler):
 	def get(self):
 		self.response.headers['Content-Type'] = 'text/plain'
 		#self.response.out.write(APPID + '\n')
-		empresas = Empresa.all().order("Nombre")
-		letradict = {}
-		inite = None
-		for empresa in empresas:
-			#self.response.out.write(empresa.Nombre + '\n')
-			inite = empresa.Nombre[0].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n')
-			empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre}
-			try:
-				letradict[inite].append(empresadict)
-			except KeyError:
-				letradict[inite] = []
-				letradict[inite].append(empresadict)
-		self.response.out.write(json.dumps({'empresa_participantes': letradict}))
+		ecache = memcache.get('wsempresas')
+		if ecache is None:
+			empresas = Empresa.all().order("Nombre")
+			letradict = {}
+			inite = None
+			for empresa in empresas:
+				#self.response.out.write(empresa.Nombre + '\n')
+				inite = empresa.Nombre[0].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n')
+				empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre}
+				try:
+					letradict[inite].append(empresadict)
+				except KeyError:
+					letradict[inite] = []
+					letradict[inite].append(empresadict)
+			memcache.add('wsempresas', json.dumps({'empresa_participantes': letradict}), 3600)
+		
+		attempts = 10
+		ecache = memcache.get('wsempresas')
+		for attempt in range(attempts):
+			ecache = memcache.get('wsempresas')
+			if ecache is not None:
+				break
+
+		if ecache is None:
+			self.response.out.write(json.dumps([]))
+		else:
+			self.response.out.write(ecache)
 
 class wsfaq(webapp.RequestHandler):
         def get(self):
