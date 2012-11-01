@@ -31,7 +31,7 @@ class gensearch(webapp.RequestHandler):
                                         existsQ.filter("Enlinea =", genlinea)"""
                                 for searchdata in existsQ:
                                         db.delete(searchdata)
-                                values = gvalue.replace('%20',' ').replace('+',' ').replace('.',' ').replace(',',' ').split(' ')
+                                values = gvalue.replace('%20',' ').replace('+',' ').replace('.',' ').replace(',',' ').replace('{',' ').replace('}',' ').split(' ')
                                 """if genlinea == 'true' or genlinea == 'True' or genlinea == '0':
                                         genlinea = True
                                 else:

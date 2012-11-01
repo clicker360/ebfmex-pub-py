@@ -98,14 +98,10 @@ class search(webapp.RequestHandler):
 								sdlist.append(sddict)
 						memcache.add(kw, json.dumps(sdlist), 3600)
 
-				attempt = 0
-				kwcache = memcache.get(kwlist[0])
-				while len(kwcache) < 1 and attempt < 100:
-					kwcache = memcache.get(kwlist[0])
-					attempt += 1
+						kwresults = sdlist
+					else:
+						kwresults = json.loads(kwcache)
 
-				if kwcache:
-					kwresults = json.loads(kwcache)
 					resultslist = []
 					nbvalidresults = 0
 
@@ -162,9 +158,6 @@ class search(webapp.RequestHandler):
 						else:
 							break
 					self.response.out.write(callback + '(' + json.dumps(resultslist) + ')')
-				else:
-					errordict = {'error': -2, 'message': 'Deadline of cache writing intents reached. Couldn\'t write cache'}
-	                                self.response.out.write(json.dumps(errordict))
 			else:
 				errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
 	                        self.response.out.write(json.dumps(errordict))

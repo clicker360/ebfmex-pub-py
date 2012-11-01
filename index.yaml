@@ -56,3 +56,8 @@ indexes:
   - name: Kind
   - name: FechaHora
     direction: desc
+
+- kind: OfertaSucursal
+  properties:
+  - name: IdSuc
+  - name: FechaHora

@@ -10,8 +10,9 @@ from google.appengine.api import memcache
 from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria
 from randString import randLetter, randString
 
-APPID = app_identity.get_default_version_hostname()
+#APPID = app_identity.get_default_version_hostname()
 #APPID = app_identity.get_application_id()
+APPID = 'www.elbuenfin.org'
 
 def randOffer(nb,empresa=None):
 	numoffer = 0
@@ -108,9 +109,13 @@ class sucursales(webapp.RequestHandler):
 						for empresa in empresas:
 							empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
 						sucdict['empresa'] = empresadict
-						ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc)
+						ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc).filter("FechaHora >=", timestampdia).filter("FechaHora <", timestampdia + timedelta(days = 1))
 						ofertaslist = []
 						for oferta in ofertas:
+							ofs = Oferta.all().filter("IdOft =", oferta.IdOft)
+							of = []
+							for ofinst in ofs.run(limit=1):
+								of = ofinst
 							ofertadict = {}
 							ofertadict['id'] = oferta.IdOft
 							ofertadict['oferta'] = oferta.Oferta
@@ -121,7 +126,7 @@ class sucursales(webapp.RequestHandler):
 							#ofertadict['categoria'] = oferta.IdCat
 							ofertadict['precio'] = oferta.Precio
 							ofertadict['url'] = oferta.Url
-							ofertadict['url_logo'] = 'http://' + APPID + '/ofimg?id=' + oferta.IdOft
+							ofertadict['url_logo'] = 'http://' + APPID + '/ofimg?id=' + str(of.BlobKey)
 							palabraslist = []
 							palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
 							for palabra in palabras:
@@ -143,13 +148,7 @@ class sucursales(webapp.RequestHandler):
 						sucdict['timestamp'] = str(sucursal.FechaHora)
 						outputlist.append(sucdict)
 					memcache.add('wssucursales-' + fechastr, outputlist, 3600)
-
-				attempts = 10
-				nbattempt = 0
-				for attempt in range(attempts):
-					suclist = memcache.get('wssucursales-' + fechastr)
-					if suclist is not None:
-						break
+					suclist = outputlist
 
 				if suclist is None:
 					self.response.out.write(json.dumps([]))

@@ -138,7 +138,7 @@ class SearchData(db.Model):
 	Sid = db.StringProperty()
 	Kind = db.StringProperty()
 	Field = db.StringProperty()
-	Value = db.StringProperty()
+	Value = db.StringProperty(multiline=True)
 	FechaHora = db.DateTimeProperty()
 	IdCat = db.IntegerProperty()
 	Enlinea = db.BooleanProperty()
