@@ -66,25 +66,28 @@ class search(webapp.RequestHandler):
 						sdlist = []
 						for sd in searchdata:
 							if gkind and gkind == 'Oferta':
-								oferta = Oferta.get(sd.Sid)
 								try:
-									estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
-								except AttributeError:
-									estados = []
-								hasestado = False
-								logourl = ''
-								try:
-									if oferta.BlobKey:
-										logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
-								except AttributeError:
+									oferta = Oferta.get(sd.Sid)
+									try:
+										estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
+									except AttributeError:
+										estados = []
+									hasestado = False
 									logourl = ''
-								for estado in estados:
-									hasestado = True
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
-									sdlist.append(sddict)
-								if not hasestado:
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
-	       	                                                       	sdlist.append(sddict)
+									try:
+										if oferta.BlobKey:
+											logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+									except AttributeError:
+										logourl = ''
+									for estado in estados:
+										hasestado = True
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
+										sdlist.append(sddict)
+									if not hasestado:
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
+		       	                                                       	sdlist.append(sddict)
+								except AttributeError:
+									pass
 							elif gkind and gkind == 'Empresa':
 								empresa = Empresa.get(sd.Sid)
 								logourl = '/eimg?id=' + empresa.IdEmp
@@ -95,10 +98,12 @@ class search(webapp.RequestHandler):
 								sdlist.append(sddict)
 						memcache.add(kw, json.dumps(sdlist), 3600)
 
-				for attempt in range(20):
+				attempt = 0
+				kwcache = memcache.get(kwlist[0])
+				while len(kwcache) < 1 and attempt < 100:
 					kwcache = memcache.get(kwlist[0])
-					if kwcache:
-						break
+					attempt += 1
+
 				if kwcache:
 					kwresults = json.loads(kwcache)
 					resultslist = []
