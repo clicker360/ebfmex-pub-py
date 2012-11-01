@@ -266,7 +266,7 @@ class SearchInitTask(webapp.RequestHandler):
                 #db.run_in_transaction(gensearch_tr)
 		#gensearch_tr
 		nbofertas = Oferta.all().count()
-	        batchsize = 50
+	        batchsize = 30
 	        batchnumber = 0
 		logging.info(str(nbofertas) + ' ofertas. Batch size: ' + str(batchsize) + '. Queueing.')
 	        while nbofertas >= 0:
@@ -375,9 +375,9 @@ application = webapp.WSGIApplication([
 	#('/backend/generatesearch', generatesearch),
 	#('/backend/updatesearch', UpdateSearch),
 	#('/backend/reportectas.csv', ReporteCtas),
-	#('/backend/searchinit', SearchInit),
-	#('/backend/gensearch', gensearch),
-	#('/backend/sit', SearchInitTask),
+	('/backend/searchinit', SearchInit),
+	('/backend/gensearch', gensearch),
+	('/backend/sit', SearchInitTask),
 	#('/backend/ust', UpdateSearchTask),
 	#('/backend/countsids', CountSids),
 	#('/backend/countofertas', CountOfertas),

@@ -70,18 +70,21 @@ class search(webapp.RequestHandler):
 								try:
 									estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
 								except AttributeError:
-									estados = None
+									estados = []
 								hasestado = False
 								logourl = ''
-								if oferta.BlobKey:
-									logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+								try:
+									if oferta.BlobKey:
+										logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+								except AttributeError:
+									logourl = ''
 								for estado in estados:
 									hasestado = True
 									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
 									sdlist.append(sddict)
 								if not hasestado:
 									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
-       	                                                         	sdlist.append(sddict)
+	       	                                                       	sdlist.append(sddict)
 							elif gkind and gkind == 'Empresa':
 								empresa = Empresa.get(sd.Sid)
 								logourl = '/eimg?id=' + empresa.IdEmp
@@ -167,12 +170,12 @@ class search(webapp.RequestHandler):
 	                        sd.filter("Kind =", gkind)
                         if gkind == 'Oferta':
                                 if categoria:
-       		                        sd.filter("IdCat =", categoria)
+       		                        sd.filter("IdCat =", int(categoria))
                                 resultslist = []
 				truncresultslist = []
                                 nbvalidresults = 0
 				onotfound = 0
-                                for result in sd.order("-FechaHora").run(batch_size=1000000):
+                                for result in sd.order("-FechaHora").run(batch_size=100000):
                                         validresult = True
                                         if nbvalidresults < batchsize:
 						try:
