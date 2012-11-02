@@ -211,7 +211,7 @@ class search(webapp.RequestHandler):
 	                                              			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
 								else:
 									logourl = None
-		                                                sddict = {'Key': result.Sid, 'Value': result.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado, 'Logo': logourl, 'Descripcion': oferta.Descripcion}
+		                                                sddict = {'Key': result.Sid, 'Value': result.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp}
 								if nbvalidresults >= batchstart:
 									truncresultslist.append(sddict)
 			                                        resultslist.append(sddict)

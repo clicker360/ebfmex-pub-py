@@ -8,7 +8,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext.webapp import template
 
 from models import Cta
-from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol
+from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol, MvBlobServe, MvBlobGen, MvBlobGenTask
 from geostuff import geogenerate
 from backend import search
 
@@ -41,6 +41,9 @@ application = webapp.WSGIApplication([
 	('/oxs', oxs),
 	('/changecontrol', changecontrol),
 	('/search', search),
+	('/mvblob', MvBlobServe),
+	('/mvblob/generate/run', MvBlobGen),
+	('/mvblob/generate', MvBlobGenTask),
 	], debug=True)
 
 def main():

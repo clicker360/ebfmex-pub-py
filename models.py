@@ -166,3 +166,8 @@ class ShortLogo(db.Model):
         Np2 = db.IntegerProperty()
         Np3 = db.IntegerProperty()
         Np4 = db.IntegerProperty()
+
+class MvBlob(db.Model):
+	FechaHora = db.DateTimeProperty()
+	IdSuc = db.StringProperty()
+	Blob = db.BlobProperty()

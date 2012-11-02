@@ -1,13 +1,16 @@
 import math, json, random, urllib, urllib2
 
+import logging
+
 from datetime import datetime, timedelta
 
 from google.appengine.ext import webapp
 from google.appengine.ext import db
 from google.appengine.api import app_identity
 from google.appengine.api import memcache
+from google.appengine.api import taskqueue
 
-from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria
+from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria, MvBlob
 from randString import randLetter, randString
 
 #APPID = app_identity.get_default_version_hostname()
@@ -55,6 +58,130 @@ def randOffer(nb,empresa=None):
 			else:
 				break
 		return returnlist
+
+class MvBlobServe(webapp.RequestHandler):
+	def get(self):
+		self.response.headers['Content-Type'] = 'text/plain'
+		timestamp = self.request.get('timestamp')
+                horas = self.request.get('horas')
+                if not timestamp or not horas or timestamp == None or horas == None or timestamp == '' or horas == '':
+                        errordict = {'error': -1, 'message': 'Must specify variables in GET method (i.e. /db?timestamp=<YYYYMMDDHH24>&horas=<int>)'}
+                        self.response.out.write(json.dumps(errordict))
+                elif len(timestamp) != 10:
+                        errordict = {'error': -2, 'message': 'timestamp must be 10 chars long: YYYYMMDDHH24'}
+                        self.response.out.write(json.dumps(errordict))
+                else:
+                        try:
+                                fechastr = timestamp[0:8]
+                                timestamp = datetime.strptime(timestamp,'%Y%m%d%H')
+                                timestampdia = datetime.strptime(fechastr, '%Y%m%d')
+                                horas = int(horas)
+                                timestampend = timestamp + timedelta(hours = horas)
+                        except ValueError:
+                                errordict = {'error': -2, 'message': 'Value Error. Timestamp must be YYYYMMDDHH24 and horas is an integer'}
+                                self.response.out.write(json.dumps(errordict))
+                        if horas > 24:
+                                errordict = {'error': -2, 'message': 'Horas must be <= 24'}
+                                self.response.out.write(json.dumps(errordict))
+                        else:
+				mvblobs = MvBlob.all().filter("FechaHora >=", timestamp).filter("FechaHora <=", timestampend)
+				outputlist = []
+				for mvblob in mvblobs.run():
+					outputlist.append(json.loads(mvblob.Blob))
+				self.response.out.write(json.dumps(outputlist))
+
+class MvBlobGenTask(webapp.RequestHandler):
+	def get(self):
+		#count = Sucursal.all().count()
+		count = memcache.get('MvBlobCount')
+		if count is None:
+			count = 0
+			suc = Sucursal.all()
+			for b in MvBlob.all().order ("-FechaHora").run(limit=1):
+	                        suc.filter("FechaHora >", b.FechaHora)
+			for s in suc.run(batch_size=10000):
+				count += 1
+		logging.info('MvBlob: loading ' + str(count) + ' Sucursales.')
+		batchsize = 10
+		batchnumber = 0
+
+		while count > 0:
+			taskqueue.add(url='/mvblob/generate/run', params={'batchsize': batchsize, 'batchnumber': batchnumber})
+			batchnumber += 1
+			count -= batchsize
+
+class MvBlobGen(webapp.RequestHandler):
+	def post(self):
+		self.response.headers['Content-Type'] = 'text/plain'
+		try:
+			batchsize = int(self.request.get('batchsize'))
+			batchnumber = int(self.request.get('batchnumber'))
+			if batchsize is None:
+				batchsize = 10
+			if batchnumber is None:
+				batchnumber = 0
+		except ValueError:
+			batchsize = 10
+			batchnumber = 0
+
+		sucs = Sucursal.all()
+		for b in MvBlob.all().order ("-FechaHora").run(limit=1):
+			sucs.filter("FechaHora >", b.FechaHora)
+		sucs.order("-FechaHora")[batchnumber * batchsize:(batchnumber * batchsize) + batchsize]
+		logging.info('MvBlob generation, batchsize: ' + str(batchsize) + ',batchnumber: ' + str(batchnumber))
+		for suc in sucs:
+			HasOferta = False
+			olist = []
+			OSs = OfertaSucursal.all().filter("IdSuc =", suc.IdSuc)
+			for OS in OSs:
+				HasOferta = True
+				olist.append(OS.IdOft)
+			if HasOferta:
+				alreadyLoaded = False
+				als = MvBlob.all().filter("IdSuc =", suc.IdSuc)
+				for al in als:
+					alreadyLoaded = True
+				if not alreadyLoaded:
+					sucdict = {'id': suc.IdSuc, 'nombre': suc.Nombre, 'lat': float(suc.Geo1), 'long': float(suc.Geo2)}
+					ent = None
+		                        entidades = Entidad.all().filter("CveEnt =", suc.DirEnt)
+		                        for entidad in entidades:
+			                        ent = entidad.Entidad
+		                        mun = None
+		                        municipios = Municipio.all().filter("CveEnt =", suc.DirEnt).filter("CveMun =", suc.DirMun)
+		                        for municipio in municipios:
+			                        mun = municipio.Municipio
+					sucdict['direccion'] = {'calle': suc.DirCalle, 'colonia': suc.DirCol, 'cp': suc.DirCp,'entidad_id': suc.DirEnt, 'entidad': ent,'municipio_id': suc.DirMun, 'municipio': mun}
+					empresas = Empresa.all().filter("IdEmp = ", suc.IdEmp)
+		                        for empresa in empresas.run(limit=1):
+				                empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
+			                        sucdict['empresa'] = empresadict
+					ofertaslist = []
+					ofertas = Oferta.all().filter("IdOft IN", olist)
+					for oferta in ofertas.run():
+						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey)}
+	                                        palabraslist = []
+	                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
+	                                        for palabra in palabras:
+		                                        palabraslist.append(palabra.Palabra)
+	                                        ofertadict['palabras'] = palabraslist
+	                                        cat = None
+	                                        categorias = Categoria.all().filter("IdCat =", oferta.IdCat)
+	                                        for categoria in categorias:
+	                                        	cat = categoria.Categoria
+	                                        ofertadict['categoria_id'] = oferta.IdCat
+	                                        ofertadict['categoria'] = cat
+	
+						ofertaslist.append(ofertadict)
+					sucdict['ofertas'] = ofertaslist
+					mvblob = MvBlob()
+					mvblob.FechaHora = suc.FechaHora
+					mvblob.IdSuc = suc.IdSuc
+					mvblob.Blob = json.dumps(sucdict)
+					mvblob.put()
+			else:
+				pass
+			#self.response.out.write(json.dumps(sucdict) + '\n')
 
 class sucursales(webapp.RequestHandler):
 	def get(self):
@@ -109,9 +236,9 @@ class sucursales(webapp.RequestHandler):
 						for empresa in empresas:
 							empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
 						sucdict['empresa'] = empresadict
-						ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc).filter("FechaHora >=", timestampdia).filter("FechaHora <", timestampdia + timedelta(days = 1))
+						ofertas = OfertaSucursal.all().filter("IdSuc =", sucursal.IdSuc)
 						ofertaslist = []
-						for oferta in ofertas:
+						for oferta in ofertas.run(batch_size=10000):
 							ofs = Oferta.all().filter("IdOft =", oferta.IdOft)
 							of = []
 							for ofinst in ofs.run(limit=1):

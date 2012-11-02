@@ -1,4 +1,4 @@
-application: ebfmxorg
+application: ebfmex-pub
 version: movil
 runtime: python27
 api_version: 1
@@ -32,6 +32,10 @@ handlers:
 
 - url: /backend/countofertas
   script: backend.py
+  login: admin
+
+- url: /mvblob/.*
+  script: main.py
   login: admin
 
 - url: /backend/.*
