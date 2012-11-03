@@ -1,4 +1,4 @@
-application: ebfmex-pub
+application: ebfmxorg
 version: movil
 runtime: python27
 api_version: 1
@@ -36,7 +36,7 @@ handlers:
 
 - url: /mvblob/.*
   script: main.py
-  login: admin
+  #login: admin
 
 - url: /backend/.*
   script: backend.py

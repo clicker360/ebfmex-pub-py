@@ -99,13 +99,17 @@ class MvBlobGenTask(webapp.RequestHandler):
 			suc = Sucursal.all()
 			for b in MvBlob.all().order ("-FechaHora").run(limit=1):
 	                        suc.filter("FechaHora >", b.FechaHora)
-			for s in suc.run(batch_size=10000):
+			for s in suc.run(batch_size=20000):
 				count += 1
+			memcache.add('MvBlobCount', count, 3600)
+		else:
+			count = int(count)
 		logging.info('MvBlob: loading ' + str(count) + ' Sucursales.')
-		batchsize = 10
+		batchsize = 50
 		batchnumber = 0
 
 		while count > 0:
+			logging.info('Batch ' + str(batchnumber))
 			taskqueue.add(url='/mvblob/generate/run', params={'batchsize': batchsize, 'batchnumber': batchnumber})
 			batchnumber += 1
 			count -= batchsize
@@ -124,12 +128,13 @@ class MvBlobGen(webapp.RequestHandler):
 			batchsize = 10
 			batchnumber = 0
 
+		offset = batchnumber * batchsize
 		sucs = Sucursal.all()
 		for b in MvBlob.all().order ("-FechaHora").run(limit=1):
 			sucs.filter("FechaHora >", b.FechaHora)
-		sucs.order("-FechaHora")[batchnumber * batchsize:(batchnumber * batchsize) + batchsize]
-		logging.info('MvBlob generation, batchsize: ' + str(batchsize) + ',batchnumber: ' + str(batchnumber))
-		for suc in sucs:
+		sucs.order("FechaHora")#[offset:offset + batchsize]
+		logging.info('MvBlob generation, batchsize: ' + str(batchsize) + ',batchnumber: ' + str(batchnumber) + '. [' + str(offset) + ':' + str(offset + batchsize) + ']')
+		for suc in sucs.run(offset=offset, limit=batchsize):
 			HasOferta = False
 			olist = []
 			OSs = OfertaSucursal.all().filter("IdSuc =", suc.IdSuc)
@@ -142,7 +147,7 @@ class MvBlobGen(webapp.RequestHandler):
 				for al in als:
 					alreadyLoaded = True
 				if not alreadyLoaded:
-					sucdict = {'id': suc.IdSuc, 'nombre': suc.Nombre, 'lat': float(suc.Geo1), 'long': float(suc.Geo2)}
+					sucdict = {'id': suc.IdSuc, 'nombre': suc.Nombre, 'lat': suc.Geo1, 'long': suc.Geo2}
 					ent = None
 		                        entidades = Entidad.all().filter("CveEnt =", suc.DirEnt)
 		                        for entidad in entidades:
@@ -159,7 +164,11 @@ class MvBlobGen(webapp.RequestHandler):
 					ofertaslist = []
 					ofertas = Oferta.all().filter("IdOft IN", olist)
 					for oferta in ofertas.run():
-						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey)}
+						if oferta.BlobKey and oferta.BlobKey is not None:
+							url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
+						else:
+							url = ''
+						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url}
 	                                        palabraslist = []
 	                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
 	                                        for palabra in palabras:
@@ -253,7 +262,11 @@ class sucursales(webapp.RequestHandler):
 							#ofertadict['categoria'] = oferta.IdCat
 							ofertadict['precio'] = oferta.Precio
 							ofertadict['url'] = oferta.Url
-							ofertadict['url_logo'] = 'http://' + APPID + '/ofimg?id=' + str(of.BlobKey)
+							if of.BlobKey and of.BlobKey is not None:
+								url = 'http://' + APPID + '/ofimg?id=' + str(of.BlobKey.key())
+							else:
+								url = ''
+							ofertadict['url_logo'] = url
 							palabraslist = []
 							palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
 							for palabra in palabras:
