@@ -59,6 +59,51 @@ def randOffer(nb,empresa=None):
 				break
 		return returnlist
 
+class MvBlobServePub(webapp.RequestHandler):
+        def get(self):
+                self.response.headers['Content-Type'] = 'text/plain'
+                timestamp = self.request.get('timestamp')
+                horas = self.request.get('horas')
+                if not timestamp or not horas or timestamp == None or horas == None or timestamp == '' or horas == '':
+                        errordict = {'error': -1, 'message': 'Must specify variables in GET method (i.e. /db?timestamp=<YYYYMMDDHH24>&horas=<int>)'}
+                        self.response.out.write(json.dumps(errordict))
+                elif len(timestamp) != 10:
+                        errordict = {'error': -2, 'message': 'timestamp must be 10 chars long: YYYYMMDDHH24'}
+                        self.response.out.write(json.dumps(errordict))
+                else:
+                        try:
+                                fechastr = timestamp[0:8]
+                                timestamp = datetime.strptime(timestamp,'%Y%m%d%H')
+                                timestampdia = datetime.strptime(fechastr, '%Y%m%d')
+                                horas = int(horas)
+                                timestampend = timestamp + timedelta(hours = horas)
+                        except ValueError:
+                                errordict = {'error': -2, 'message': 'Value Error. Timestamp must be YYYYMMDDHH24 and horas is an integer'}
+                                self.response.out.write(json.dumps(errordict))
+                        if horas > 24:
+                                errordict = {'error': -2, 'message': 'Horas must be <= 24'}
+                                self.response.out.write(json.dumps(errordict))
+                        else:
+                                mvblobs = MvBlob.all().filter("FechaHora >=", timestamp).filter("FechaHora <=", timestampend)
+                                outputlist = []
+                                for mvblob in mvblobs.run():
+					blob = json.loads(mvblob.Blob)
+					ofertaslist = []
+					oidlist = []
+					for oferta in blob['ofertas']:
+						alreadyadded = False
+						for oid in oidlist:
+							if oferta['id'] == oid:
+								alreadyadded = True
+						if not alreadyadded:
+							fechapub = datetime.strptime(oferta['fechapub'], '%Y-%m-%d')
+							if fechapub <= timestamp:
+								ofertaslist.append(oferta)
+								oidlist.append(oferta['id'])
+					blob['ofertas'] = ofertaslist
+					outputlist.append(blob)
+				self.response.out.write(json.dumps(outputlist))
+
 class MvBlobServe(webapp.RequestHandler):
 	def get(self):
 		self.response.headers['Content-Type'] = 'text/plain'
