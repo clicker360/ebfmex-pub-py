@@ -31,7 +31,7 @@ class index(webapp.RequestHandler):
 application = webapp.WSGIApplication([
         ('/', index),
 	('/wsoferta', wsoferta),
-	('/wsofertas', wsofertas),
+	#('/wsofertas', wsofertas),
 	('/wsofertaxc', wsofertaxc),
 	('/wsofertaxp', wsofertaxp),
 	('/wsempresas', wsempresas),

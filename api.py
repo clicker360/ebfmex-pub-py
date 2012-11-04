@@ -2,7 +2,7 @@ import math, json, random, urllib, urllib2
 
 import logging
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from google.appengine.ext import webapp
 from google.appengine.ext import db
@@ -168,7 +168,7 @@ class MvBlobGen(webapp.RequestHandler):
 							url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
 						else:
 							url = ''
-						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url}
+						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url, 'fechapub': str(oferta.FechaHoraPub.strftime('%Y-%m-%d'))}
 	                                        palabraslist = []
 	                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
 	                                        for palabra in palabras:
@@ -384,7 +384,7 @@ class wsofertas(webapp.RequestHandler):
 			#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal")
 			#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Geo1 <= :1 AND Geo2 <= :2", maxx, maxy)
 			#sucursalesQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Latitud >= :1 AND Latitud <= :2", minx, maxx)
-			sucursalQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Latitud >= :1 AND Latitud <= :2", minx, maxx)
+			#sucursalQ = db.GqlQuery("SELECT * FROM Sucursal WHERE Latitud >= :1 AND Latitud <= :2", minx, maxx)
 			sucursales = sucursalQ.run(batch_size=100)
 			sucursallist = []
 			sucursaldict = {}
