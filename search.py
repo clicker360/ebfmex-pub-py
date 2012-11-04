@@ -75,7 +75,9 @@ class search(webapp.RequestHandler):
 									hasestado = False
 									logourl = ''
 									try:
-										if oferta.BlobKey:
+										if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+											logourl = oferta.Codigo
+										elif oferta.BlobKey and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
 											logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
 									except AttributeError:
 										logourl = ''
@@ -207,10 +209,14 @@ class search(webapp.RequestHandler):
 
 							#self.response.out.write('almost\n')
 							if validresult == True:
-								if oferta.BlobKey:
-	                                              			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
-								else:
-									logourl = None
+								try:
+									logourl = ''
+									if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+	                                                                        logourl = oferta.Codigo
+									elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+		                                              			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+								except AttributeError:
+									logourl = ''
 		                                                sddict = {'Key': result.Sid, 'Value': result.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp}
 								if nbvalidresults >= batchstart:
 									truncresultslist.append(sddict)
