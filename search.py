@@ -98,7 +98,7 @@ class search(webapp.RequestHandler):
 							else:
 								sddict = {'Sid': sd.Sid, 'Kind': sd.Kind, 'Field': sd.Field, 'Value': sd.Value}
 								sdlist.append(sddict)
-						memcache.add(kw, json.dumps(sdlist), 3600)
+						memcache.add(kw, json.dumps(sdlist), 5400)
 
 						kwresults = sdlist
 					else:
@@ -175,7 +175,7 @@ class search(webapp.RequestHandler):
 				truncresultslist = []
                                 nbvalidresults = 0
 				onotfound = 0
-                                for result in sd.order("-FechaHora").run(batch_size=100000):
+                                for result in sd.order("-FechaHora").run(limit=100000):
                                         validresult = True
                                         if nbvalidresults < batchsize:
 						try:

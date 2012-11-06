@@ -11,6 +11,7 @@ from models import Cta
 from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol, MvBlobServe, MvBlobGen, MvBlobGenTask, MvBlobServePub
 from geostuff import geogenerate
 from backend import search
+from searchcache import searchCache
 
 class index(webapp.RequestHandler):
 	def get(self):
@@ -41,6 +42,8 @@ application = webapp.WSGIApplication([
 	('/oxs', oxs),
 	('/changecontrol', changecontrol),
 	('/search', search),
+	('/search-cache', searchCache),
+	#('/search', searchCache),
 	#('/mvblob', MvBlobServe),
 	('/db', MvBlobServe),
 	('/dbv', MvBlobServePub),
