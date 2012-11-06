@@ -168,6 +168,7 @@ class searchCache(webapp.RequestHandler):
 	                        self.response.out.write(json.dumps(errordict))
 		else:
 			if gkind == 'Oferta' and estado and estado is not None and estado != '':
+				#self.response.out.write("1")
 				outputlist = []
 				if tipo == '3':
 					tipo = None
@@ -176,91 +177,32 @@ class searchCache(webapp.RequestHandler):
 					outputlist.append(oferta)
 				#self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
 				self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+			elif gkind == 'Oferta' and categoria is not None and categoria != '':
+				#self.response.out.write("2")
+				outputlist = []
+                                if tipo == '3':
+                                        tipo = None
+                                ofertas = json.loads(cacheCategoria(categoria,tipo=tipo))
+                                for oferta in ofertas[batchstart:batchstart + batchsize]:
+                                        outputlist.append(oferta)
+                                #self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
+                                self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+			elif gkind == 'Oferta':
+				#self.response.out.write("3")
+				outputlist = []
+                                if tipo == '3':
+                                        tipo = None
+                                ofertas = json.loads(cacheGeneral(tipo=tipo))
+                                for oferta in ofertas[batchstart:batchstart + batchsize]:
+                                        outputlist.append(oferta)
+                                #self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
+                                self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
 			else:
-				sd = SearchData.all()
-	                        if gkind:
-		                        sd.filter("Kind =", gkind)
-	                        if gkind == 'Oferta':
-	                                if categoria:
-	       		                        sd.filter("IdCat =", int(categoria))
-	                                resultslist = []
-					truncresultslist = []
-        	                        nbvalidresults = 0
-					onotfound = 0
-	                                for result in sd.order("-FechaHora").run(limit=10000):
-	                                        validresult = True
-	                                        if nbvalidresults < batchsize:
-							try:
-								#self.response.out.write('far\n')
-	       	                                        	oferta = Oferta.get(result.Sid)
-								if oferta.FechaHoraPub > datetime.now():
-									#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
-									validresult = False
-								if validresult and estado and estado != '':
-									try:
-										validresult = False
-										oeQ = OfertaEstado.all().filter("IdOft =", oferta.IdOft).filter("IdEnt =", str(estado))
-										for oe in oeQ.run(limit=1):
-											validresult = True
-									except DeadlineExceededError:
-										validresult = False
-										self.response.clear()
-			                                                        self.response.headers['Content-Type'] = 'application/json'
-								if validresult == True:
-									for oft in resultslist:
-										if oft['IdOft'] == oferta.IdOft:
-											#self.response.out.write(oferta.IdOft  + ' already in results\n')
-											validresult = False
-								
-								if validresult == True and tipo:
-		                                                        try:
-		                                                                tipo = int(tipo)
-		                                                        except ValueError:
-		                                                                tipo = 3
-		                                                        if tipo == 1:
-		                                                                if oferta.Enlinea != True:
-		                                                                     	validresult = False
-		                                                        if tipo == 2:
-		                                                                if oferta.Enlinea != False:
-		                                                                        validresult = False
-
-								#self.response.out.write('almost\n')
-								if validresult == True:
-									try:
-										logourl = ''
-										if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
-		                                                                        logourl = oferta.Codigo
-										elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
-			                                              			logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
-									except AttributeError:
-										logourl = ''
-			                                                sddict = {'Key': result.Sid, 'Value': result.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp}
-									if nbvalidresults >= batchstart:
-										truncresultslist.append(sddict)
-				                                        resultslist.append(sddict)
-									nbvalidresults += 1
-							except AttributeError:
-								onotfound += 1
-								pass
-							except db.BadValueError:
-								#logging.error('Bad Oferta key [' + result.Sid + ']. PASS.')
-								onotfound += 1
-								pass
-							except DeadlineExceededError:
-								self.response.clear()
-								self.response.headers['Content-Type'] = 'application/json'
-								#logging.error('Deadline exceeded. PASS.')
-								pass
-	                                        else:
-	                                        	break
-					if onotfound > 0:
-						logging.error('Ofertas keys not found or bad Oferta keys: ' + str(onotfound) + '. PASS.')
-	                                self.response.out.write(callback + '(' + json.dumps(truncresultslist) + ')')
-				"""errordict = {'error': -1, 'message': 'Correct use: /search?keywords=<str>[&kind=<str>&categoria=<int>&estado=<str>&tipo=<int>]'}
-	                        self.response.out.write(json.dumps(errordict))"""
+				#self.response.out.write("4")
+				logging.error('Kind ' + gkind + ' not sopported in Search.')
 
 def cacheEstado(eid, cid=None,tipo=None):
-	logging.info('eid: ' + str(eid) + '. cid: ' + str(cid) + '. tipo: ' + str(tipo) + '.')
+	#logging.info('eid: ' + str(eid) + '. cid: ' + str(cid) + '. tipo: ' + str(tipo) + '.')
 	ocache = memcache.get('cacheEstado' + str(eid))
 	if ocache is None:
 		ofertaslist = []
@@ -319,3 +261,107 @@ def cacheEstado(eid, cid=None,tipo=None):
 			if cvalid and tvalid:
 				outputlist.append(oferta)
 		return json.dumps(outputlist)
+
+def cacheCategoria(cid,tipo=None):
+        #logging.info('cid: ' + str(cid) + '. tipo: ' + str(tipo) + '.')
+        ocache = memcache.get('cacheCategoria' + str(cid))
+        if ocache is None:
+                ofertaslist = []
+                ofertas = Oferta.all().filter("IdCat =", int(cid)).order("-FechaHora")
+                unfoundo = 0
+                for oferta in ofertas.run():
+                	try:
+                        	logourl = ''
+                                if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+                                	logourl = oferta.Codigo
+                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+                                	logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+                        except AttributeError:
+                                logourl = ''
+			elist = []
+                        try:
+                                ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
+                                for ofertaE in ofertasE.run():
+                                        elist.append(ofertaE.IdEnt)
+                        except AttributeError:
+                                elist = []
+                        if len(elist) == 0:
+                                elist.append('')
+                        if oferta.Enlinea == True:
+                                tipo = 1
+                        else:
+                                tipo = 2
+			for eid in elist:
+	                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo}
+	                        ofertaslist.append(ofertadict)
+                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 3600)
+        else:
+                ofertaslist = json.loads(ocache)
+        if tipo is None:
+                return json.dumps(ofertaslist)
+	else:
+                outputlist = []
+                for oferta in ofertaslist:
+                        tvalid = True
+                        if tipo and tipo is not None and tipo != '':
+                                try:
+                                        tipo = int(tipo)
+                                        if oferta['Tipo'] != tipo:
+                                                tvalid = False
+                                except ValueError:
+                                        tvalid = False
+                        if tvalid:
+                                outputlist.append(oferta)
+                return json.dumps(outputlist)
+
+def cacheGeneral(tipo=None):
+        #logging.info('tipo: ' + str(tipo) + '.')
+        ocache = memcache.get('cacheGeneral')
+        if ocache is None:
+                ofertaslist = []
+                ofertas = Oferta.all().order("-FechaHora")
+                unfoundo = 0
+                for oferta in ofertas.run(limit=2500):
+                        try:
+                                logourl = ''
+                                if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+                                        logourl = oferta.Codigo
+                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+                                        logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+                        except AttributeError:
+                                logourl = ''
+			elist = []
+			try:
+				ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft).run(limit=5)
+				for ofertaE in ofertasE:
+					elist.append(ofertaE.IdEnt)
+			except AttributeError:
+				elist = []
+			if len(elist) == 0:
+				elist.append('')
+                        if oferta.Enlinea == True:
+                                tipo = 1
+                        else:
+                                tipo = 2
+			for eid in elist:
+	                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo}
+	                        ofertaslist.append(ofertadict)
+                memcache.add('cacheGeneral', json.dumps(ofertaslist), 1800)
+        else:
+                ofertaslist = json.loads(ocache)
+        if tipo is None:
+                return json.dumps(ofertaslist)
+        else:
+                outputlist = []
+                for oferta in ofertaslist:
+                        tvalid = True
+                        if tipo and tipo is not None and tipo != '':
+                                try:
+                                        tipo = int(tipo)
+                                        if oferta['Tipo'] != tipo:
+                                                tvalid = False
+                                except ValueError:
+                                        tvalid = False
+                        if tvalid:
+                                outputlist.append(oferta)
+                return json.dumps(outputlist)
