@@ -169,18 +169,9 @@ class searchCache(webapp.RequestHandler):
 		else:
 			if gkind == 'Oferta' and estado and estado is not None and estado != '':
 				outputlist = []
-				if categoria is not None and tipo is not None and tipo != '3':
-					#self.response.out.write("1")
-					ofertas = json.loads(cacheEstado(estado,cid=categoria,tipo=tipo))
-				elif categoria is not None and tipo is None:
-					#self.response.out.write("2")
-					ofertas = json.loads(cacheEstado(estado,cid=categoria,tipo=None))
-				elif categoria is None and tipo is not None and tipo != '3':
-					#self.response.out.write("3")
-					ofertas = json.loads(cacheEstado(estado,cid=None,tipo=tipo))
-				else:
-					#self.response.out.write("4")
-					ofertas = json.loads(cacheEstado(estado))
+				if tipo == '3':
+					tipo = None
+				ofertas = json.loads(cacheEstado(estado,cid=categoria,tipo=tipo))
 				for oferta in ofertas[batchstart:batchstart + batchsize]:
 					outputlist.append(oferta)
 				#self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')

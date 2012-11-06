@@ -55,6 +55,8 @@ class search(webapp.RequestHandler):
 					kwlist.append(kw.lower())
 			nbkeywords = len(kwlist)
 			if nbkeywords > 0:
+				resultslist = []
+				nbvalidresults = 0
 				for kw in kwlist:
 					kwcache = memcache.get(kw)
 					if kwcache is None:
@@ -103,9 +105,6 @@ class search(webapp.RequestHandler):
 						kwresults = sdlist
 					else:
 						kwresults = json.loads(kwcache)
-
-					resultslist = []
-					nbvalidresults = 0
 
 					for kwresult in kwresults:
 						#self.response.out.write('far\n')
@@ -159,7 +158,7 @@ class search(webapp.RequestHandler):
 									resultslist.append(kwresult)
 						else:
 							break
-					self.response.out.write(callback + '(' + json.dumps(resultslist) + ')')
+				self.response.out.write(callback + '(' + json.dumps(resultslist) + ')')
 			else:
 				errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
 	                        self.response.out.write(json.dumps(errordict))
