@@ -107,6 +107,16 @@ class searchCache(webapp.RequestHandler):
 					else:
 						kwresults = json.loads(kwcache)
 
+				if nbkeywords > 1:
+					kwresults = []
+					for kw in kwlist:
+						try:
+							kwresultscache = json.loads(memcache.get(kw))
+							for element in kwresultscache:
+								kwresults.append(element)
+						except TypeError:
+							pass
+
 				resultslist = []
 				nbvalidresults = 0
 
@@ -129,8 +139,8 @@ class searchCache(webapp.RequestHandler):
                                                                 for result in resultslist:
 									if result['IdOft'] == kwresult['IdOft']:
 										validresult = False	
-						if validresult == True and nbkeywords > 1:
-							xtrafound = False
+						"""if validresult == True and nbkeywords > 1:
+							xtrafound = True
 							for kw in kwlist:
 								if kw != kwresult['Value']:
 									xtrafound = False
@@ -141,24 +151,25 @@ class searchCache(webapp.RequestHandler):
 									if xtrafound == False:
 										break
 							if xtrafound == False:
-								validresult = False
+								validresult = False"""
 
-							if gkind == 'Oferta' and tipo:
-								try:
-									tipo = int(tipo)
-								except ValueError:
-									tipo = 3
-								if tipo == 1:
-									if kwresult['Enlinea'] != True:
-										validresult = False
-								if tipo == 2:
-									if kwresult['Enlinea'] != False:
-										validresult = False
+						if validresult and  gkind == 'Oferta' and tipo:
+							try:
+								tipo = int(tipo)
+							except ValueError:
+								tipo = 3
+							if tipo == 1:
+								if kwresult['Enlinea'] != True:
+									validresult = False
+							if tipo == 2:
+								if kwresult['Enlinea'] != False:
+									validresult = False
 								
 						#self.response.out.write('Almost\n')
 						if validresult == True:
 							nbvalidresults += 1
 							if nbvalidresults >= batchstart:
+								logging.info('Adding ' + kwresult['IdOft'])
 								resultslist.append(kwresult)
 					else:
 						break
@@ -322,9 +333,12 @@ def cacheGeneral(tipo=None):
         ocache = memcache.get('cacheGeneral')
         if ocache is None:
                 ofertaslist = []
-                ofertas = Oferta.all().order("-FechaHora")
+		try:
+	                ofertas = Oferta.all().order("-FechaHora").run(limit=2500)
+		except db.BadValueError:
+			ofertas = db.GqlQuery("SELECT IdOft, IdCat, Oferta, Descripcion, IdEmp, Codigo, Enlinea FROM Oferta")
                 unfoundo = 0
-                for oferta in ofertas.run(limit=2500):
+                for oferta in ofertas:
                         try:
                                 logourl = ''
                                 if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
