@@ -625,7 +625,9 @@ class wsempresas(webapp.RequestHandler):
 		#self.response.out.write(APPID + '\n')
 		ecache = memcache.get('wsempresas')
 		if ecache is None:
-			empresas = Empresa.all().order("Nombre")
+			#empresas = Empresa.all().order("Nombre")
+			empresasQ = db.GqlQuery("SELECT IdEmp, Nombre FROM Empresa ORDER BY Nombre")
+			empresas = empresasQ.fetch(100000)
 			letradict = {}
 			inite = None
 			for empresa in empresas:

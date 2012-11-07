@@ -49,7 +49,7 @@ class searchCache(webapp.RequestHandler):
 
 		if keywords and keywords != '':
 			kwlist = []
-			keywordslist = keywords.replace('+',' ').replace('.',' ').replace(',',' ').replace(';',' ').replace('\'',' ').replace('"',' ').split(' ')
+			keywordslist = keywords.replace('+',' ').replace('%2B',' ').replace('%2b',' ').replace('.',' ').replace(',',' ').replace(';',' ').replace('\'',' ').replace('"',' ').split(' ')
 			for kw in keywordslist:
 				if len(kw) >= 4:
 					#keywordslist.remove(kw)
@@ -267,17 +267,20 @@ def cacheCategoria(cid,tipo=None):
         ocache = memcache.get('cacheCategoria' + str(cid))
         if ocache is None:
                 ofertaslist = []
-                ofertas = Oferta.all().filter("IdCat =", int(cid)).order("-FechaHora")
+		try:
+	                ofertas = Oferta.all().filter("IdCat =", int(cid)).order("-FechaHora").run()
+		except db.BadValueError:
+			ofertas = db.GqlQuery("SELECT IdOft, IdCat, Oferta, Descripcion, IdEmp, Codigo, Enlinea FROM Oferta")
                 unfoundo = 0
-                for oferta in ofertas.run():
-                	try:
-                        	logourl = ''
+                for oferta in ofertas:
+                       	logourl = ''
+			try:
                                 if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
                                 	logourl = oferta.Codigo
                                 elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
                                 	logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
                         except AttributeError:
-                                logourl = ''
+                                err = 'logourl'
 			elist = []
                         try:
                                 ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft)

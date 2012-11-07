@@ -83,7 +83,7 @@ class Oferta(db.Model):
 	IdEmp = db.StringProperty()
 	IdCat = db.IntegerProperty()
 	Oferta = db.StringProperty()
-	BlobKey = blobstore.BlobReferenceProperty()
+	BlobKey = blobstore.BlobReferenceProperty(required=False, validator=None)
 	#BlobKey = db.StringProperty()
 	Empresa = db.StringProperty()
 	Descripcion = db.TextProperty()

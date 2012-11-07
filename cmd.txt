@@ -18,3 +18,9 @@ from models import SearchData
 
 for sd in SearchData.all():
 	db.delete(sd)
+
+###### Loop Oferta ######
+from models import Oferta
+
+for o in Oferta.all():
+  print(o.IdOft)
