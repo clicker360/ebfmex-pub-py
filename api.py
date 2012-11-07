@@ -632,24 +632,19 @@ class wsempresas(webapp.RequestHandler):
 			inite = None
 			for empresa in empresas:
 				#self.response.out.write(empresa.Nombre + '\n')
-				inite = empresa.Nombre[0].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n')
+				nombreClean = empresa.Nombre.replace(' ','').replace('"','').replace('\'','').replace('(','').replace('{','').replace('[','')
+				inite = nombreClean[0].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n')
 				empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre}
 				try:
 					letradict[inite].append(empresadict)
 				except KeyError:
 					letradict[inite] = []
 					letradict[inite].append(empresadict)
-			memcache.add('wsempresas', json.dumps({'empresa_participantes': letradict}), 3600)
-		
-		attempts = 10
-		ecache = memcache.get('wsempresas')
-		for attempt in range(attempts):
-			ecache = memcache.get('wsempresas')
-			if ecache is not None:
-				break
-
-		if ecache is None:
-			self.response.out.write(json.dumps([]))
+			try:
+				memcache.add('wsempresas', json.dumps({'empresa_participantes': letradict}), 3600)
+			except ValueError:
+				logging.error('Couldn\'t write wsempresas cache.')
+			self.response.out.write(json.dumps({'empresa_participantes': letradict}))	
 		else:
 			self.response.out.write(ecache)
 

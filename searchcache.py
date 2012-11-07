@@ -107,62 +107,62 @@ class searchCache(webapp.RequestHandler):
 					else:
 						kwresults = json.loads(kwcache)
 
-					resultslist = []
-					nbvalidresults = 0
+				resultslist = []
+				nbvalidresults = 0
 
-					for kwresult in kwresults:
-						#self.response.out.write('far\n')
-						if nbvalidresults < batchsize:
-							validresult = True
-							if categoria:
-								if kwresult['IdCat'] != categoria:
-									validresult = False
-							if estado:
-								if kwresult['IdEnt'] != estado:
-									validresult = False
-							if gkind == 'Oferta':
-								fechapub = datetime.strptime(kwresult['FechaHoraPub'].split('.')[0], '%Y-%m-%d %H:%M:%S')
-								if fechapub > datetime.now():
-									#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
-									validresult = False
-								else:
-	                                                                for result in resultslist:
-										if result['IdOft'] == kwresult['IdOft']:
-											validresult = False	
-							if validresult == True and nbkeywords > 1:
-								xtrafound = False
-								for kw in kwlist:
-									if kw != kwresult['Value']:
-										xtrafound = False
-										xtrakw = json.loads(memcache.get(kw))
-										for xoft in xtrakw:
-											if xoft['Key'] == kwresult['Key']:
-												xtrafound = True
-										if xtrafound == False:
-											break
-								if xtrafound == False:
-									validresult = False
+				for kwresult in kwresults:
+					#self.response.out.write('far\n')
+					if nbvalidresults < batchsize:
+						validresult = True
+						if categoria:
+							if kwresult['IdCat'] != categoria:
+								validresult = False
+						if estado:
+							if kwresult['IdEnt'] != estado:
+								validresult = False
+						if gkind == 'Oferta':
+							fechapub = datetime.strptime(kwresult['FechaHoraPub'].split('.')[0], '%Y-%m-%d %H:%M:%S')
+							if fechapub > datetime.now():
+								#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
+								validresult = False
+							else:
+                                                                for result in resultslist:
+									if result['IdOft'] == kwresult['IdOft']:
+										validresult = False	
+						if validresult == True and nbkeywords > 1:
+							xtrafound = False
+							for kw in kwlist:
+								if kw != kwresult['Value']:
+									xtrafound = False
+									xtrakw = json.loads(memcache.get(kw))
+									for xoft in xtrakw:
+										if xoft['Key'] == kwresult['Key']:
+											xtrafound = True
+									if xtrafound == False:
+										break
+							if xtrafound == False:
+								validresult = False
 
-								if gkind == 'Oferta' and tipo:
-									try:
-										tipo = int(tipo)
-									except ValueError:
-										tipo = 3
-									if tipo == 1:
-										if kwresult['Enlinea'] != True:
-											validresult = False
-									if tipo == 2:
-										if kwresult['Enlinea'] != False:
-											validresult = False
+							if gkind == 'Oferta' and tipo:
+								try:
+									tipo = int(tipo)
+								except ValueError:
+									tipo = 3
+								if tipo == 1:
+									if kwresult['Enlinea'] != True:
+										validresult = False
+								if tipo == 2:
+									if kwresult['Enlinea'] != False:
+										validresult = False
 								
-							#self.response.out.write('Almost\n')
-							if validresult == True:
-								nbvalidresults += 1
-								if nbvalidresults >= batchstart:
-									resultslist.append(kwresult)
-						else:
-							break
-					self.response.out.write(callback + '(' + json.dumps(resultslist) + ')')
+						#self.response.out.write('Almost\n')
+						if validresult == True:
+							nbvalidresults += 1
+							if nbvalidresults >= batchstart:
+								resultslist.append(kwresult)
+					else:
+						break
+				self.response.out.write(callback + '(' + json.dumps(resultslist) + ')')
 			else:
 				errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
 	                        self.response.out.write(json.dumps(errordict))
