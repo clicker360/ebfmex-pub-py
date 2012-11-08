@@ -66,3 +66,14 @@ indexes:
   properties:
   - name: Nombre
   - name: IdEmp
+
+- kind: Empresa
+  properties:
+  - name: FechaHora
+  - name: IdEmp
+
+- kind: Empresa
+  properties:
+  - name: FechaHora
+  - name: IdEmp
+  - name: Nombre

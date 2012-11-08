@@ -623,11 +623,13 @@ class wsempresas(webapp.RequestHandler):
 	def get(self):
 		self.response.headers['Content-Type'] = 'text/plain'
 		#self.response.out.write(APPID + '\n')
-		ecache = memcache.get('wsempresas')
+		ecache = memcache.get('wsEmpresas')
 		if ecache is None:
 			#empresas = Empresa.all().order("Nombre")
-			empresasQ = db.GqlQuery("SELECT IdEmp, Nombre FROM Empresa ORDER BY Nombre")
-			empresas = empresasQ.fetch(100000)
+			lastempslist = []
+			empresasQ = db.GqlQuery("SELECT IdEmp, Nombre FROM Empresa ORDER BY FechaHora")
+			empresas = empresasQ.fetch(1000)
+			empresas.sort()
 			letradict = {}
 			inite = None
 			for empresa in empresas:
@@ -641,12 +643,13 @@ class wsempresas(webapp.RequestHandler):
 					letradict[inite] = []
 					letradict[inite].append(empresadict)
 			try:
-				memcache.add('wsempresas', json.dumps({'empresa_participantes': letradict}), 3600)
+				memcache.add('wsEmpresas', json.dumps({'empresa_participantes': letradict}), 18000)
 			except ValueError:
 				logging.error('Couldn\'t write wsempresas cache.')
 			self.response.out.write(json.dumps({'empresa_participantes': letradict}))	
 		else:
 			self.response.out.write(ecache)
+		#self.response.out.write(json.dumps({'empresas_participantes': []}))
 
 class wsfaq(webapp.RequestHandler):
         def get(self):

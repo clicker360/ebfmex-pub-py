@@ -169,7 +169,7 @@ class searchCache(webapp.RequestHandler):
 						if validresult == True:
 							nbvalidresults += 1
 							if nbvalidresults >= batchstart:
-								logging.info('Adding ' + kwresult['IdOft'])
+								#logging.info('Adding ' + kwresult['IdOft'])
 								resultslist.append(kwresult)
 					else:
 						break
@@ -238,8 +238,9 @@ def cacheEstado(eid, cid=None,tipo=None):
 					tipo = 1
 				else:
 					tipo = 2
-				ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo}
-				ofertaslist.append(ofertadict)
+				if oferta.FechaHoraPub <= datetime.now():
+					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+					ofertaslist.append(ofertadict)
 			except UnboundLocalError:
 				unfoundo += 1
 				pass
@@ -306,8 +307,9 @@ def cacheCategoria(cid,tipo=None):
                         else:
                                 tipo = 2
 			for eid in elist:
-	                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo}
-	                        ofertaslist.append(ofertadict)
+				if oferta.FechaHoraPub <= datetime.now():
+		                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+		                        ofertaslist.append(ofertadict)
                 memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 3600)
         else:
                 ofertaslist = json.loads(ocache)
@@ -334,7 +336,7 @@ def cacheGeneral(tipo=None):
         if ocache is None:
                 ofertaslist = []
 		try:
-	                ofertas = Oferta.all().order("-FechaHora").run(limit=2500)
+	                ofertas = Oferta.all().order("-FechaHora").run(limit=1500)
 		except db.BadValueError:
 			ofertas = db.GqlQuery("SELECT IdOft, IdCat, Oferta, Descripcion, IdEmp, Codigo, Enlinea FROM Oferta")
                 unfoundo = 0
@@ -349,7 +351,7 @@ def cacheGeneral(tipo=None):
                                 logourl = ''
 			elist = []
 			try:
-				ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft).run(limit=5)
+				ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft).run(limit=1)
 				for ofertaE in ofertasE:
 					elist.append(ofertaE.IdEnt)
 			except AttributeError:
@@ -361,8 +363,9 @@ def cacheGeneral(tipo=None):
                         else:
                                 tipo = 2
 			for eid in elist:
-	                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo}
-	                        ofertaslist.append(ofertadict)
+				if oferta.FechaHoraPub <= datetime.now():
+		                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+		                        ofertaslist.append(ofertadict)
                 memcache.add('cacheGeneral', json.dumps(ofertaslist), 1800)
         else:
                 ofertaslist = json.loads(ocache)
