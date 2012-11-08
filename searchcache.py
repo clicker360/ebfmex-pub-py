@@ -45,7 +45,7 @@ class searchCache(webapp.RequestHandler):
                         batchsize = 12
 
                 batchstart = batchsize * (pagina - 1)
-                batchsize = batchsize * pagina
+                batchsize = batchstart + batchsize
 		#self.response.out.write(str(batchsize) + " " + str(batchstart))
 
 		if keywords and keywords != '':
@@ -104,6 +104,7 @@ class searchCache(webapp.RequestHandler):
 							else:
 								sddict = {'Sid': sd.Sid, 'Kind': sd.Kind, 'Field': sd.Field, 'Value': sd.Value}
 								sdlist.append(sddict)
+						sdlist = sortu(sdlist)
 						memcache.add(kw, json.dumps(sdlist), 5400)
 
 						kwresults = sdlist
@@ -187,7 +188,7 @@ class searchCache(webapp.RequestHandler):
 				if tipo == '3':
 					tipo = None
 				ofertas = json.loads(cacheEstado(estado,cid=categoria,tipo=tipo))
-				for oferta in ofertas[batchstart:batchstart + batchsize]:
+				for oferta in ofertas[batchstart:batchsize]:
 					outputlist.append(oferta)
 				#self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
 				self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
@@ -197,7 +198,7 @@ class searchCache(webapp.RequestHandler):
                                 if tipo == '3':
                                         tipo = None
                                 ofertas = json.loads(cacheCategoria(categoria,tipo=tipo))
-                                for oferta in ofertas[batchstart:batchstart + batchsize]:
+                                for oferta in ofertas[batchstart:batchsize]:
                                         outputlist.append(oferta)
                                 #self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
                                 self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
@@ -207,8 +208,9 @@ class searchCache(webapp.RequestHandler):
                                 if tipo == '3':
                                         tipo = None
                                 ofertas = json.loads(cacheGeneral(tipo=tipo))
-                                for oferta in ofertas[batchstart:batchstart + batchsize]:
+                                for oferta in ofertas[batchstart:batchsize]:
                                         outputlist.append(oferta)
+				#logging.info('Batch[%s:%s]', batchstart, batchsize)
                                 #self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
                                 self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
 			else:
@@ -388,6 +390,7 @@ def cacheGeneral(tipo=None):
 					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
 			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
 			                        ofertaslist.append(ofertadict)
+			ofertaslist = sortu(ofertaslist, 'IdOft')
 	                memcache.add('cacheGeneral', json.dumps(ofertaslist), 1800)
 		except TypeError, e:
 			logging.error(str(e))
@@ -415,3 +418,38 @@ def cacheGeneral(tipo=None):
                         if tvalid:
                                 outputlist.append(oferta)
                 return json.dumps(outputlist)
+
+def sortu(alist, uelement=None):
+	masterlist = []
+	index = 0
+	logging.info('Sorting list. Input: ' + str(len(alist)) + ' elements.')
+	for element in alist:
+		present = False
+		for mastere in masterlist:
+			if uelement is not None:
+				if element[uelement] == mastere:
+					present = True
+			else:
+				if element == mastere:
+					present = True
+		if present:
+			alist.pop(index)
+		else:
+			if uelement is not None:
+				masterlist.append(element[uelement])
+			else:
+				masterlist.append(element)
+		index += 1
+	"""outputlist = []
+	for element in alist:
+		present = False
+		for mastere in masterlist:
+			if element['IdOft'] == mastere:
+				present = True
+		if not present:
+			outputlist.append(element)
+			masterlist.append(element['IdOft'])
+
+	alist = outputlist"""
+	logging.info('Sorting list. Output: ' + str(len(alist)) + ' elements.')
+	return alist
