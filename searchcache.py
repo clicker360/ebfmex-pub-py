@@ -9,6 +9,7 @@ from google.appengine.runtime import DeadlineExceededError
 
 from models import *
 import models
+from sendmail import sendmail
 
 H = 6
 
@@ -48,8 +49,10 @@ class searchCache(webapp.RequestHandler):
 		#self.response.out.write(str(batchsize) + " " + str(batchstart))
 
 		if keywords and keywords != '':
+			keywords = keywords.lower().replace('buen fin','').replace('buenfin','').replace('oferta','').replace('descuento','').replace('barat','')
+		if keywords and keywords != '':
 			kwlist = []
-			keywordslist = keywords.replace('+',' ').replace('%2B',' ').replace('%2b',' ').replace('.',' ').replace(',',' ').replace(';',' ').replace('\'',' ').replace('"',' ').split(' ')
+			keywordslist = keywords.replace('+',' ').replace('%2B',' ').replace('%2b',' ').replace('%',' ').replace('.',' ').replace(',',' ').replace(';',' ').replace('\'',' ').replace('"',' ').split(' ')
 			for kw in keywordslist:
 				if len(kw) >= 4:
 					#keywordslist.remove(kw)
@@ -238,11 +241,20 @@ def cacheEstado(eid, cid=None,tipo=None):
 					tipo = 1
 				else:
 					tipo = 2
-				if oferta.FechaHoraPub <= datetime.now():
+				if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
 					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
 					ofertaslist.append(ofertadict)
 			except UnboundLocalError:
 				unfoundo += 1
+				pass
+			except TypeError, e:
+	                        logging.error(str(e))
+	                        if str(e) == 'Must provide Entity or BlobKey':
+        	                        receipient = 'thomas@clicker360.com,ahuezo@clicker360.com'
+	                                subject = 'BlobKey error'
+	                                body = 'BlobKey error'
+	                                errmail = sendmail(receipient, subject, body)
+	                                errmail.send()
 				pass
 		memcache.add('cacheEstado' + str(eid), json.dumps(ofertaslist), 3600)
 		if unfoundo > 0:
@@ -284,33 +296,42 @@ def cacheCategoria(cid,tipo=None):
 		except db.BadValueError:
 			ofertas = db.GqlQuery("SELECT IdOft, IdCat, Oferta, Descripcion, IdEmp, Codigo, Enlinea FROM Oferta")
                 unfoundo = 0
-                for oferta in ofertas:
-                       	logourl = ''
-			try:
-                                if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
-                                	logourl = oferta.Codigo
-                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
-                                	logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
-                        except AttributeError:
-                                err = 'logourl'
-			elist = []
-                        try:
-                                ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
-                                for ofertaE in ofertasE.run():
-                                        elist.append(ofertaE.IdEnt)
-                        except AttributeError:
-                                elist = []
-                        if len(elist) == 0:
-                                elist.append('')
-                        if oferta.Enlinea == True:
-                                tipo = 1
-                        else:
-                                tipo = 2
-			for eid in elist:
-				if oferta.FechaHoraPub <= datetime.now():
-		                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
-		                        ofertaslist.append(ofertadict)
-                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 3600)
+		try:
+	                for oferta in ofertas:
+	                       	logourl = ''
+				try:
+	                                if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+	                                	logourl = oferta.Codigo
+	                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+	                                	logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+	                        except AttributeError:
+	                                err = 'logourl'
+				elist = []
+	                        try:
+	                                ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
+	                                for ofertaE in ofertasE.run(limit=1):
+	                                        elist.append(ofertaE.IdEnt)
+	                        except AttributeError:
+	                                elist = []
+	                        if len(elist) == 0:
+	                                elist.append('')
+	                        if oferta.Enlinea == True:
+	                                tipo = 1
+	                        else:
+	                                tipo = 2
+				for eid in elist:
+					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+			                        ofertaslist.append(ofertadict)
+	                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 3600)
+		except TypeError, e:
+                        logging.error(str(e))
+                        if str(e) == 'Must provide Entity or BlobKey':
+                                receipient = 'thomas@clicker360.com,ahuezo@clicker360.com'
+                                subject = 'BlobKey error'
+                                body = 'BlobKey error'
+                                errmail = sendmail(receipient, subject, body)
+                                errmail.send()
         else:
                 ofertaslist = json.loads(ocache)
         if tipo is None:
@@ -340,33 +361,42 @@ def cacheGeneral(tipo=None):
 		except db.BadValueError:
 			ofertas = db.GqlQuery("SELECT IdOft, IdCat, Oferta, Descripcion, IdEmp, Codigo, Enlinea FROM Oferta")
                 unfoundo = 0
-                for oferta in ofertas:
-                        try:
-                                logourl = ''
-                                if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
-                                        logourl = oferta.Codigo
-                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
-                                        logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
-                        except AttributeError:
-                                logourl = ''
-			elist = []
-			try:
-				ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft).run(limit=1)
-				for ofertaE in ofertasE:
-					elist.append(ofertaE.IdEnt)
-			except AttributeError:
+		try:
+	                for oferta in ofertas:
+	                        try:
+	                                logourl = ''
+	                                if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+	                                        logourl = oferta.Codigo
+	                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+	                                        logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+	                        except AttributeError:
+	                                logourl = ''
 				elist = []
-			if len(elist) == 0:
-				elist.append('')
-                        if oferta.Enlinea == True:
-                                tipo = 1
-                        else:
-                                tipo = 2
-			for eid in elist:
-				if oferta.FechaHoraPub <= datetime.now():
-		                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
-		                        ofertaslist.append(ofertadict)
-                memcache.add('cacheGeneral', json.dumps(ofertaslist), 1800)
+				try:
+					ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft).run(limit=1)
+					for ofertaE in ofertasE:
+						elist.append(ofertaE.IdEnt)
+				except AttributeError:
+					elist = []
+				if len(elist) == 0:
+					elist.append('')
+	                        if oferta.Enlinea == True:
+	                                tipo = 1
+	                        else:
+	                                tipo = 2
+				for eid in elist:
+					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+			                        ofertaslist.append(ofertadict)
+	                memcache.add('cacheGeneral', json.dumps(ofertaslist), 1800)
+		except TypeError, e:
+			logging.error(str(e))
+			if str(e) == 'Must provide Entity or BlobKey':
+				receipient = 'thomas@clicker360.com,ahuezo@clicker360.com'
+				subject = 'BlobKey error'
+				body = 'BlobKey error'
+				errmail = sendmail(receipient, subject, body)
+				errmail.send()
         else:
                 ofertaslist = json.loads(ocache)
         if tipo is None:
