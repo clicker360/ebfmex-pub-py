@@ -178,7 +178,7 @@ class searchCache(webapp.RequestHandler):
 								resultslist.append(kwresult)
 					else:
 						break
-				self.response.out.write(callback + '(' + json.dumps(resultslist) + ')')
+				self.response.out.write(callback + '(' + json.dumps(sortu(resultslist)) + ')')
 			else:
 				errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
 	                        self.response.out.write(json.dumps(errordict))
@@ -259,6 +259,7 @@ def cacheEstado(eid, cid=None,tipo=None):
 	                                errmail = sendmail(receipient, subject, body)
 	                                errmail.send()
 				pass
+		ofertaslist = sortu(ofertaslist)
 		memcache.add('cacheEstado' + str(eid), json.dumps(ofertaslist), 3600)
 		if unfoundo > 0:
 			logging.error('Inconsistency OfertaEstado/Oferta found: ' + str(unfoundo))
@@ -287,7 +288,7 @@ def cacheEstado(eid, cid=None,tipo=None):
 					tvalid = False
 			if cvalid and tvalid:
 				outputlist.append(oferta)
-		return json.dumps(outputlist)
+		return json.dumps(sortu(outputlist))
 
 def cacheCategoria(cid,tipo=None):
         #logging.info('cid: ' + str(cid) + '. tipo: ' + str(tipo) + '.')
@@ -326,6 +327,7 @@ def cacheCategoria(cid,tipo=None):
 					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
 			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
 			                        ofertaslist.append(ofertadict)
+			ofertaslist = sortu(ofertaslist)
 	                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 3600)
 		except TypeError, e:
                         logging.error(str(e))
@@ -352,7 +354,7 @@ def cacheCategoria(cid,tipo=None):
                                         tvalid = False
                         if tvalid:
                                 outputlist.append(oferta)
-                return json.dumps(outputlist)
+                return json.dumps(sortu(outputlist))
 
 def cacheGeneral(tipo=None):
         #logging.info('tipo: ' + str(tipo) + '.')
@@ -418,7 +420,7 @@ def cacheGeneral(tipo=None):
                                         tvalid = False
                         if tvalid:
                                 outputlist.append(oferta)
-                return json.dumps(outputlist)
+                return json.dumps(sortu(outputlist))
 
 def sortu(alist, uelement=None):
 	inputnb = len(alist)
@@ -441,17 +443,6 @@ def sortu(alist, uelement=None):
 			else:
 				masterlist.append(element)
 		index += 1
-	"""outputlist = []
-	for element in alist:
-		present = False
-		for mastere in masterlist:
-			if element['IdOft'] == mastere:
-				present = True
-		if not present:
-			outputlist.append(element)
-			masterlist.append(element['IdOft'])
-
-	alist = outputlist"""
 	if inputnb != len(alist):
 		logging.info('Sorting list. Input: ' + str(inputnb) + '. Output: ' + str(len(alist)) + ' elements.')
 	return alist
