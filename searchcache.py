@@ -104,7 +104,7 @@ class searchCache(webapp.RequestHandler):
 							else:
 								sddict = {'Sid': sd.Sid, 'Kind': sd.Kind, 'Field': sd.Field, 'Value': sd.Value}
 								sdlist.append(sddict)
-						sdlist = sortu(sdlist)
+						sdlist = sortu(sdlist, 'IdOft')
 						memcache.add(kw, json.dumps(sdlist), 5400)
 
 						kwresults = sdlist
@@ -124,6 +124,7 @@ class searchCache(webapp.RequestHandler):
 				resultslist = []
 				nbvalidresults = 0
 
+				kwresults = sortu(kwresults, 'IdOft')
 				for kwresult in kwresults:
 					#self.response.out.write('far\n')
 					if nbvalidresults < batchsize:
@@ -420,9 +421,9 @@ def cacheGeneral(tipo=None):
                 return json.dumps(outputlist)
 
 def sortu(alist, uelement=None):
+	inputnb = len(alist)
 	masterlist = []
 	index = 0
-	logging.info('Sorting list. Input: ' + str(len(alist)) + ' elements.')
 	for element in alist:
 		present = False
 		for mastere in masterlist:
@@ -451,5 +452,6 @@ def sortu(alist, uelement=None):
 			masterlist.append(element['IdOft'])
 
 	alist = outputlist"""
-	logging.info('Sorting list. Output: ' + str(len(alist)) + ' elements.')
+	if inputnb != len(alist):
+		logging.info('Sorting list. Input: ' + str(inputnb) + '. Output: ' + str(len(alist)) + ' elements.')
 	return alist

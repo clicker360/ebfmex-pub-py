@@ -144,7 +144,7 @@ class MvBlobGenTask(webapp.RequestHandler):
 			suc = Sucursal.all()
 			for b in MvBlob.all().order ("-FechaHora").run(limit=1):
 	                        suc.filter("FechaHora >", b.FechaHora)
-			for s in suc.run(batch_size=20000):
+			for s in suc.run(batch_size=30000):
 				count += 1
 			memcache.add('MvBlobCount', count, 3600)
 		else:
@@ -187,55 +187,53 @@ class MvBlobGen(webapp.RequestHandler):
 				HasOferta = True
 				olist.append(OS.IdOft)
 			if HasOferta:
-				alreadyLoaded = False
 				als = MvBlob.all().filter("IdSuc =", suc.IdSuc)
 				for al in als:
-					alreadyLoaded = True
-				if not alreadyLoaded:
-					sucdict = {'id': suc.IdSuc, 'nombre': suc.Nombre, 'lat': suc.Geo1, 'long': suc.Geo2}
-					ent = None
-		                        entidades = Entidad.all().filter("CveEnt =", suc.DirEnt)
-		                        for entidad in entidades:
-			                        ent = entidad.Entidad
-		                        mun = None
-		                        municipios = Municipio.all().filter("CveEnt =", suc.DirEnt).filter("CveMun =", suc.DirMun)
-		                        for municipio in municipios:
-			                        mun = municipio.Municipio
-					sucdict['direccion'] = {'calle': suc.DirCalle, 'colonia': suc.DirCol, 'cp': suc.DirCp,'entidad_id': suc.DirEnt, 'entidad': ent,'municipio_id': suc.DirMun, 'municipio': mun}
-					empresas = Empresa.all().filter("IdEmp = ", suc.IdEmp)
-		                        for empresa in empresas.run(limit=1):
-				                empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
-			                        sucdict['empresa'] = empresadict
-					ofertaslist = []
-					ofertas = Oferta.all().filter("IdOft IN", olist)
-					for oferta in ofertas.run():
-						if oferta.BlobKey and oferta.BlobKey is not None:
-							url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
-						else:
-							url = ''
-						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url, 'fechapub': str(oferta.FechaHoraPub.strftime('%Y-%m-%d'))}
-	                                        palabraslist = []
-	                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
-	                                        for palabra in palabras:
-		                                        palabraslist.append(palabra.Palabra)
-	                                        ofertadict['palabras'] = palabraslist
-	                                        cat = None
-	                                        categorias = Categoria.all().filter("IdCat =", oferta.IdCat)
-	                                        for categoria in categorias:
-	                                        	cat = categoria.Categoria
-	                                        ofertadict['categoria_id'] = oferta.IdCat
-	                                        ofertadict['categoria'] = cat
-	
-						ofertaslist.append(ofertadict)
-					sucdict['ofertas'] = ofertaslist
-					mvblob = MvBlob()
-					mvblob.FechaHora = suc.FechaHora
-					mvblob.IdSuc = suc.IdSuc
-					mvblob.Blob = json.dumps(sucdict)
-					mvblob.put()
-			else:
-				pass
-			#self.response.out.write(json.dumps(sucdict) + '\n')
+					db.delete(al)
+				sucdict = {'id': suc.IdSuc, 'nombre': suc.Nombre, 'lat': suc.Geo1, 'long': suc.Geo2}
+				ent = None
+	                        entidades = Entidad.all().filter("CveEnt =", suc.DirEnt)
+	                        for entidad in entidades:
+		                        ent = entidad.Entidad
+	                        mun = None
+	                        municipios = Municipio.all().filter("CveEnt =", suc.DirEnt).filter("CveMun =", suc.DirMun)
+	                        for municipio in municipios:
+		                        mun = municipio.Municipio
+				sucdict['direccion'] = {'calle': suc.DirCalle, 'colonia': suc.DirCol, 'cp': suc.DirCp,'entidad_id': suc.DirEnt, 'entidad': ent,'municipio_id': suc.DirMun, 'municipio': mun}
+				empresas = Empresa.all().filter("IdEmp = ", suc.IdEmp)
+	                        for empresa in empresas.run(limit=1):
+			                empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
+		                        sucdict['empresa'] = empresadict
+				ofertaslist = []
+				ofertas = Oferta.all().filter("IdOft IN", olist)
+				for oferta in ofertas.run():
+					if oferta.BlobKey and oferta.BlobKey is not None:
+						url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
+					else:
+						url = ''
+					ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url, 'fechapub': str(oferta.FechaHoraPub.strftime('%Y-%m-%d'))}
+                                        palabraslist = []
+                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
+                                        for palabra in palabras:
+	                                        palabraslist.append(palabra.Palabra)
+                                        ofertadict['palabras'] = palabraslist
+                                        cat = None
+                                        categorias = Categoria.all().filter("IdCat =", oferta.IdCat)
+                                        for categoria in categorias:
+                                        	cat = categoria.Categoria
+                                        ofertadict['categoria_id'] = oferta.IdCat
+                                        ofertadict['categoria'] = cat
+
+					ofertaslist.append(ofertadict)
+				sucdict['ofertas'] = ofertaslist
+				mvblob = MvBlob()
+				mvblob.FechaHora = suc.FechaHora
+				mvblob.IdSuc = suc.IdSuc
+				mvblob.Blob = json.dumps(sucdict)
+				mvblob.put()
+		else:
+			pass
+		#self.response.out.write(json.dumps(sucdict) + '\n')
 
 class sucursales(webapp.RequestHandler):
 	def get(self):
