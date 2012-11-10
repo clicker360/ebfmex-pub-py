@@ -1,5 +1,6 @@
 import datetime, random
 from datetime import datetime, timedelta
+import json
 
 import logging
 
@@ -16,6 +17,7 @@ from models import Sucursal, Oferta, OfertaSucursal, Empresa, Categoria, OfertaP
 from randString import randLetter, randString
 from search import generatesearch, search
 from be import gensearch
+from sendmail import sendmail
 
 APPID = app_identity.get_default_version_hostname()
 
@@ -366,6 +368,143 @@ class ReporteCtas(webapp.RequestHandler):
 
 				self.response.out.write('"' + cta.Nombre + '","' + cta.Apellidos + '","' +  cta.Puesto + '","' +  cta.Email + '","' + cta.EmailAlt + '","' + cta.Pass + '","' + cta.Tel + '","' + cta.Cel + '","' + str(cta.FechaHora) + '","' + cta.CodigoCfm + '","' + str(cta.Status) + '","' + emp.IdEmp + '","' + emp.RFC + '","' + emp.Nombre + '","' + haslogo + '","' + emp.RazonSoc + '","' + emp.DirCalle + '","' + emp.DirCol + '","' + entidad + '","' + municipio + '","' + emp.DirCp + '","' + emp.NumSuc + '","' + emp.OrgEmp + '","' + emp.OrgEmpOtro + '","' + emp.OrgEmpReg + '","' + emp.Url + '","' + str(emp.PartLinea) + '","' + str(emp.ExpComer) + '","' + str(emp.Desc).replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n').replace('\n',' ').replace('\r',' ') + '","' + str(emp.FechaHora) + '","' + str(emp.Status) + '"\n')
 
+class Blacklist(webapp.RequestHandler):
+	def get(self):
+		ofertaslist = []
+		futuredate = datetime.strptime('9999-12-31 23:59:59', '%Y-%m-%d %H:%M:%S')
+		blacklist = [
+		'dummy',
+		'groan',
+		'lobortis',
+		'ano',
+		'boludo',
+		'cabron',
+		'cabrona',
+		'cabronez',
+		'caca',
+		'cagada',
+		'cagadera',
+		'cagaderas',
+		'cagon',
+		'cagoteada',
+		'cagotear',
+		'cagoteo',
+		'chaquero',
+		'chaqueteras',
+		'chigadera',
+		'chigados',
+		'chinga',
+		'chingadera',
+		'chingados',
+		'chingon',
+		'chingue',
+		'chingues',
+		'coger',
+		'cogido',
+		'cogon',
+		'cogones',
+		'coley',
+		'concha',
+		'culera',
+		'culero',
+		'culo',
+		'droga',
+		'drogadicto',
+		'estipideces',
+		'estupida',
+		'estupideses',
+		'estupido',
+		'fecal',
+		'fuck',
+		'fucking',
+		'hueva',
+		'huevos',
+		'jodido',
+		'jotadas',
+		'joto',
+		'joton',
+		'maaamaaadaaa',
+		'maamaadaa',
+		'mamada',
+		'mamadera',
+		'mamador',
+		'mamar',
+		'mamdota',
+		'mame',
+		'mames',
+		'mamon',
+		'maricon',
+		'marik',
+		'marika',
+		'mierda',
+		'mierdero',
+		'mion',
+		'miona',
+		'mrda',
+		'nalgas',
+		'nalgon',
+		'narco',
+		'narcotrafico',
+		'nomamar',
+		'peda',
+		'pedo',
+		'pendeja',
+		'pendejada',
+		'pendejo',
+		'pene',
+		'pinche',
+		'pinches',
+		'pinchon',
+		'pinchuriento',
+		'ptm',
+		'pucha',
+		'puta',
+		'putero',
+		'putin',
+		'teta',
+		'tetas',
+		'verga',
+		'vergisima',
+		'vergon',
+		'verguisima',
+		'verija',
+		'verijudo',
+		'weba',
+		'webones',
+		'webos',
+		'wtf',
+		'zeta',
+		'zetas',
+		]
+
+		mainlist = []
+		ind = 0
+		sublist = []
+		for palabra in blacklist:
+			if ind >= 30:
+				mainlist.append(sublist)
+				sublist = []
+				ind = 0
+			sublist.append(palabra)
+			ind += 1
+
+		for blacklist in mainlist:
+			blacklistedQ = db.GqlQuery("SELECT Sid FROM SearchData WHERE Kind = 'Oferta' AND Value IN :1", blacklist)
+			for blacklisted in blacklistedQ:
+				oferta = Oferta.get(blacklisted.Sid)
+				if oferta.FechaHoraPub < futuredate:
+					oferta.FechaHoraPub = futuredate
+					oferta.put()
+					ofertaslist.append(oferta.IdOft)
+		self.response.out.write(json.dumps(ofertaslist))
+
+		receipient = 'thomas@clicker360.com'
+		subject = 'Ofertas blacklisted'
+		body = 'Esas ofertas se quitaron por causa de tener palabras del blacklist.\nOfertas:\n' + json.dumps(ofertaslist) + '\n\nPalabras:\n' + json.dumps(blacklist)
+		
+		mail = sendmail(receipient,subject,body)
+		mail.send()
+
 application = webapp.WSGIApplication([
         #('/backend/migrategeo', migrateGeo),
         #('/backend/filldummy', dummyOfertas),
@@ -381,6 +520,7 @@ application = webapp.WSGIApplication([
 	('/backend/ust', UpdateSearchTask),
 	#('/backend/countsids', CountSids),
 	#('/backend/countofertas', CountOfertas),
+	('/backend/blacklist', Blacklist),
         ], debug=True)
 
 def main():

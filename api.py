@@ -190,7 +190,7 @@ class MvBlobGen(webapp.RequestHandler):
 				als = MvBlob.all().filter("IdSuc =", suc.IdSuc)
 				for al in als:
 					db.delete(al)
-				sucdict = {'id': suc.IdSuc, 'nombre': suc.Nombre, 'lat': suc.Geo1, 'long': suc.Geo2}
+				sucdict = {'id': suc.IdSuc, 'nombre': suc.Nombre, 'lat': suc.Geo1, 'long': suc.Geo2, 'fechamod': str(suc.FechaHora)}
 				ent = None
 	                        entidades = Entidad.all().filter("CveEnt =", suc.DirEnt)
 	                        for entidad in entidades:
@@ -207,10 +207,17 @@ class MvBlobGen(webapp.RequestHandler):
 				ofertaslist = []
 				ofertas = Oferta.all().filter("IdOft IN", olist)
 				for oferta in ofertas.run():
-					if oferta.BlobKey and oferta.BlobKey is not None:
-						url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
-					else:
-						url = ''
+					url = ''
+	                                try:
+	                                        if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+	                                                url = oferta.Codigo
+					except AttributeError:
+                                                err = 'logourl'
+					try:
+	                                        if url == '' and oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+							url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
+	                                except AttributeError:
+	                                        err = 'logourl'
 					ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url, 'fechapub': str(oferta.FechaHoraPub.strftime('%Y-%m-%d'))}
                                         palabraslist = []
                                         palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)

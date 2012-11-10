@@ -10,7 +10,7 @@ class sendmail:
 	def send(self):
 		try:
 			message = mail.EmailMessage()
-			message.sender = "El Mal Fin <contacto@elbuenfin.com>"
+			message.sender = "El Mal Fin <thomas@clicker360.com>"
 			message.to = self.receipient
 			message.subject = self.subject
 			message.body = self.body

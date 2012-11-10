@@ -77,3 +77,9 @@ indexes:
   - name: FechaHora
   - name: IdEmp
   - name: Nombre
+
+- kind: SearchData
+  properties:
+  - name: Kind
+  - name: Value
+  - name: Sid

@@ -180,8 +180,9 @@ class searchCache(webapp.RequestHandler):
 						break
 				self.response.out.write(callback + '(' + json.dumps(sortu(resultslist)) + ')')
 			else:
-				errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
-	                        self.response.out.write(json.dumps(errordict))
+				#errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
+	                        #self.response.out.write(json.dumps(errordict))
+				self.response.out.write(callback + '(' + json.dumps([]) + ')')
 		else:
 			if gkind == 'Oferta' and estado and estado is not None and estado != '':
 				#self.response.out.write("1")
