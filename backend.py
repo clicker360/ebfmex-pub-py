@@ -7,7 +7,7 @@ import logging
 from google.appengine.api import urlfetch
 
 from google.appengine.api import taskqueue
-
+from google.appengine.api import memcache
 from google.appengine.ext import db
 from google.appengine.ext import webapp
 from google.appengine.ext.webapp.util import run_wsgi_app
@@ -505,6 +505,70 @@ class Blacklist(webapp.RequestHandler):
 		mail = sendmail(receipient,subject,body)
 		mail.send()
 
+class Ban(webapp.RequestHandler):
+	def get(self):
+		level = self.request.get('level')
+		gid = self.request.get('id')
+		if not level or level == '' or not gid or gid == '':
+			self.response.out.write(json.dumps({'error': -1, 'message': 'Wrong parameters. Usage: (backend/ban?level=<entity>&id=<id>'}))
+		elif level != 'Cta' and level != 'Empresa' and level != 'Oferta':
+			self.response.out.write(json.dumps({'error': -2, 'message': 'Wrong level, must be Cta, Empresa or Oferta'}))
+		else:
+			ids = gid.split(',')
+			self.response.out.write(ids)
+			for uid in ids:
+				if level == 'Oferta':
+					banOferta(uid)
+
+def banOferta(oid):
+	key = ''
+	idoft = ''
+	cat = 0
+	edos = []
+	future = datetime.strptime('9999-12-31 23:59:59', '%Y-%m-%d %H:%M:%S')
+	ofertas = Oferta.all().filter("IdOft =", oid).run(limit=1)
+	for oferta in ofertas:
+		key = str(oferta.key())
+		cat = oferta.IdCat
+		idoft = oferta.IdOft
+		oferta.FechaHoraPub = future
+		oferta.put()
+	for estado in db.GqlQuery("SELECT IdEnt FROM OfertaEstado WHERE IdOft = :1", idoft).run():
+		edos.append(estado.IdEnt)
+	for edo in edos:
+		edocache = memcache.get('cacheEstado' +	edo)
+		if edocache is not None:
+			edocache = json.loads(edocache)
+			indice = 0
+			for oferta in edocache:
+				if oferta['IdOft'] == idoft:
+					edocache.pop(indice)
+				indice += 1
+			memcache.add('cacheEstado' + edo, json.dumps(edocache), 3600)
+	catcache = memcache.get('cacheCategoria' + str(cat))
+	if catcache is not None:
+		catcache = json.loads(catcache)
+		indice = 0
+		for oferta in catcache:
+			if oferta['IdOft'] == idoft:
+				ofertacache.pop(indice)
+			indice += 1
+		memcache.add('cacheCategoria' + str(cat), json.dumps(catcache), 3600)
+	cachegen = memcache.get('cacheGeneral')
+	if cachegen is not None:
+		cachegen = json.loads(cachegen)
+		indice = 0
+		for oferta in cachegen:
+			if oferta['IdOft'] == idoft:
+				cachegen.pop(indice)
+			indice += 1
+		memcache.add('cacheGeneral', json.dumps(cachegen), 3600)
+	banSD(key)
+
+def banSD(sid):
+	for sd in SearchData.all().filter("Sid =", sid).run():
+		db.delete(sd)
+
 application = webapp.WSGIApplication([
         #('/backend/migrategeo', migrateGeo),
         #('/backend/filldummy', dummyOfertas),
@@ -521,6 +585,7 @@ application = webapp.WSGIApplication([
 	#('/backend/countsids', CountSids),
 	#('/backend/countofertas', CountOfertas),
 	('/backend/blacklist', Blacklist),
+	('/backend/ban', Ban),
         ], debug=True)
 
 def main():

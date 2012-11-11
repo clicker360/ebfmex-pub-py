@@ -6,12 +6,15 @@ from google.appengine.ext import webapp
 from google.appengine.ext import db
 from google.appengine.api import memcache
 from google.appengine.runtime import DeadlineExceededError
+from google.appengine.api import app_identity
+
 
 from models import *
 import models
 from sendmail import sendmail
 
 H = 6
+APPID = app_identity.get_default_version_hostname()
 
 class searchCache(webapp.RequestHandler):
 	def get(self):
@@ -255,8 +258,8 @@ def cacheEstado(eid, cid=None,tipo=None):
 	                        logging.error(str(e))
 	                        if str(e) == 'Must provide Entity or BlobKey':
         	                        receipient = 'thomas@clicker360.com,ahuezo@clicker360.com'
-	                                subject = 'BlobKey error'
-	                                body = 'BlobKey error'
+	                                subject = 'BlobKey error in ' + APPID
+	                                body = 'BlobKey error in ' + APPID
 	                                errmail = sendmail(receipient, subject, body)
 	                                errmail.send()
 				pass

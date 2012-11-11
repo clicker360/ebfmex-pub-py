@@ -83,3 +83,8 @@ indexes:
   - name: Kind
   - name: Value
   - name: Sid
+
+- kind: OfertaEstado
+  properties:
+  - name: IdOft
+  - name: IdEnt
