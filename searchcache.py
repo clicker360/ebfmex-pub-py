@@ -52,12 +52,14 @@ class searchCache(webapp.RequestHandler):
 		#self.response.out.write(str(batchsize) + " " + str(batchstart))
 
 		if keywords and keywords != '':
-			keywords = keywords.lower().replace('buen fin','').replace('buenfin','').replace('oferta','').replace('descuento','').replace('barat','')
+			keywords = keywords.lower().replace('buen fin','').replace('buenfin','').replace('oferta','').replace('descuento','').replace('barat','').replace('+para+',' ').replace('%2Bpara%2B',' ').replace('%2bpara%2b',' ')
+		if len(keywords.replace(' ','')) == 0:
+			keywords = ''
 		if keywords and keywords != '':
 			kwlist = []
 			keywordslist = keywords.replace('+',' ').replace('%2B',' ').replace('%2b',' ').replace('%',' ').replace('.',' ').replace(',',' ').replace(';',' ').replace('\'',' ').replace('"',' ').split(' ')
 			for kw in keywordslist:
-				if len(kw) >= 4:
+				if len(kw) >= 4 and kw != 'para':
 					#keywordslist.remove(kw)
 					kwlist.append(kw.lower())
 			nbkeywords = len(kwlist)
@@ -71,7 +73,7 @@ class searchCache(webapp.RequestHandler):
 							searchdata.filter("Kind =", gkind)
 						searchdata.order("-FechaHora")
 						sdlist = []
-						for sd in searchdata:
+						for sd in searchdata.run():
 							if gkind and gkind == 'Oferta':
 								try:
 									oferta = Oferta.get(sd.Sid)
@@ -81,6 +83,9 @@ class searchCache(webapp.RequestHandler):
 										estados = []
 									hasestado = False
 									logourl = ''
+									promocion = 'http://www.elbuenfin.org/imgs/imageDefault.png'
+									if oferta.Promocion is not None and oferta.Promocion != '':
+										promocion = oferta.Promocion
 									try:
 										if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
 											logourl = oferta.Codigo
@@ -90,10 +95,10 @@ class searchCache(webapp.RequestHandler):
 										logourl = ''
 									for estado in estados:
 										hasestado = True
-										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
 										sdlist.append(sddict)
 									if not hasestado:
-										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub)}
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
 		       	                                                       	sdlist.append(sddict)
 								except AttributeError:
 									pass
@@ -243,13 +248,16 @@ def cacheEstado(eid, cid=None,tipo=None):
 	                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
 	                                        logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
 				except AttributeError:
-	                                logourl = ''
+					logourl = ''
+	                        promocion = 'http://www.elbuenfin.org/imgs/imageDefault.png'
+                                if oferta.Promocion is not None and oferta.Promocion != '':
+                                        promocion = oferta.Promocion
 				if oferta.Enlinea == True:
 					tipo = 1
 				else:
 					tipo = 2
 				if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
 					ofertaslist.append(ofertadict)
 			except UnboundLocalError:
 				unfoundo += 1
@@ -306,14 +314,17 @@ def cacheCategoria(cid,tipo=None):
                 unfoundo = 0
 		try:
 	                for oferta in ofertas:
-	                       	logourl = ''
+	                       	promocion = 'http://www.elbuenfin.org/imgs/imageDefault.png'
+				logourl = ''
 				try:
 	                                if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
 	                                	logourl = oferta.Codigo
 	                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
 	                                	logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
 	                        except AttributeError:
-	                                err = 'logourl'
+	                                logourl = ''
+                                if oferta.Promocion is not None and oferta.Promocion != '':
+                                        promocion = oferta.Promocion
 				elist = []
 	                        try:
 	                                ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
@@ -329,7 +340,7 @@ def cacheCategoria(cid,tipo=None):
 	                                tipo = 2
 				for eid in elist:
 					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist)
 	                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 3600)
@@ -379,7 +390,10 @@ def cacheGeneral(tipo=None):
 	                                elif oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
 	                                        logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
 	                        except AttributeError:
-	                                logourl = ''
+					logourl = ''
+	                        promocion = 'http://www.elbuenfin.org/imgs/imageDefault.png'
+                                if oferta.Promocion is not None and oferta.Promocion != '':
+	                                promocion = oferta.Promocion
 				elist = []
 				try:
 					ofertasE = OfertaEstado.all().filter("IdOft =", oferta.IdOft).run(limit=1)
@@ -395,7 +409,7 @@ def cacheGeneral(tipo=None):
 	                                tipo = 2
 				for eid in elist:
 					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub)}
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist, 'IdOft')
 	                memcache.add('cacheGeneral', json.dumps(ofertaslist), 1800)

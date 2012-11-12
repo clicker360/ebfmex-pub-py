@@ -205,33 +205,34 @@ class MvBlobGen(webapp.RequestHandler):
 			                empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
 		                        sucdict['empresa'] = empresadict
 				ofertaslist = []
-				ofertas = Oferta.all().filter("IdOft IN", olist)
-				for oferta in ofertas.run():
-					url = ''
-	                                try:
-	                                        if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
-	                                                url = oferta.Codigo
-					except AttributeError:
-                                                err = 'logourl'
-					try:
-	                                        if url == '' and oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
-							url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
-	                                except AttributeError:
-	                                        err = 'logourl'
-					ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url, 'fechapub': str(oferta.FechaHoraPub.strftime('%Y-%m-%d'))}
-                                        palabraslist = []
-                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
-                                        for palabra in palabras:
-	                                        palabraslist.append(palabra.Palabra)
-                                        ofertadict['palabras'] = palabraslist
-                                        cat = None
-                                        categorias = Categoria.all().filter("IdCat =", oferta.IdCat)
-                                        for categoria in categorias:
-                                        	cat = categoria.Categoria
-                                        ofertadict['categoria_id'] = oferta.IdCat
-                                        ofertadict['categoria'] = cat
+				for o in olist:
+					ofertas = Oferta.all().filter("IdOft =", o).run()
+					for oferta in ofertas:
+						url = ''
+		                                try:
+		                                        if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+		                                                url = oferta.Codigo
+						except AttributeError:
+	                                                err = 'logourl'
+						try:
+		                                        if url == '' and oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+								url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
+		                                except AttributeError:
+		                                        err = 'logourl'
+						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url, 'fechapub': str(oferta.FechaHoraPub.strftime('%Y-%m-%d'))}
+	                                        palabraslist = []
+	                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
+	                                        for palabra in palabras:
+		                                        palabraslist.append(palabra.Palabra)
+	                                        ofertadict['palabras'] = palabraslist
+	                                        cat = None
+	                                        categorias = Categoria.all().filter("IdCat =", oferta.IdCat)
+	                                        for categoria in categorias:
+	                                        	cat = categoria.Categoria
+	                                        ofertadict['categoria_id'] = oferta.IdCat
+	                                        ofertadict['categoria'] = cat
 
-					ofertaslist.append(ofertadict)
+						ofertaslist.append(ofertadict)
 				sucdict['ofertas'] = ofertaslist
 				mvblob = MvBlob()
 				mvblob.FechaHora = suc.FechaHora
