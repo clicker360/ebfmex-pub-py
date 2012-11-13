@@ -274,7 +274,7 @@ def cacheEstado(eid, cid=None,tipo=None):
 	                                errmail.send()
 				pass
 		ofertaslist = sortu(ofertaslist)
-		memcache.add('cacheEstado' + str(eid), json.dumps(ofertaslist), 3600)
+		memcache.add('cacheEstado' + str(eid), json.dumps(ofertaslist), 7200)
 		if unfoundo > 0:
 			logging.error('Inconsistency OfertaEstado/Oferta found: ' + str(unfoundo))
 	else:
@@ -346,7 +346,7 @@ def cacheCategoria(cid,tipo=None):
 			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist)
-	                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 3600)
+	                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 7200)
 		except TypeError, e:
                         logging.error(str(e))
                         if str(e) == 'Must provide Entity or BlobKey':
@@ -416,7 +416,7 @@ def cacheGeneral(tipo=None):
 			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist, 'IdOft')
-	                memcache.add('cacheGeneral', json.dumps(ofertaslist), 1800)
+	                memcache.add('cacheGeneral', json.dumps(ofertaslist), 7200)
 		except TypeError, e:
 			logging.error(str(e))
 			if str(e) == 'Must provide Entity or BlobKey':
