@@ -67,6 +67,7 @@ class searchCache(webapp.RequestHandler):
 				for kw in kwlist:
 					kwcache = memcache.get(kw)
 					if kwcache is None:
+						logging.error('No se encontro o no se pudo cargar cache ' + kw + '. Busqueda en DataStore y creacion de cache.')
 						#self.response.out.write('Create cache')
 						searchdata = SearchData.all().filter("Value =", kw)
 						if gkind:
@@ -231,6 +232,7 @@ def cacheEstado(eid, cid=None,tipo=None):
 	#logging.info('eid: ' + str(eid) + '. cid: ' + str(cid) + '. tipo: ' + str(tipo) + '.')
 	ocache = memcache.get('cacheEstado' + str(eid))
 	if ocache is None:
+		logging.error('No se encontro o no se pudo cargar cache cacheEstado' + str(eid) + '. Busqueda en DataStore y creacion de cache.')
 		ofertaslist = []
 		ofertasE = OfertaEstado.all().filter("IdEnt =", str(eid))
 		unfoundo = 0
@@ -306,6 +308,7 @@ def cacheCategoria(cid,tipo=None):
         #logging.info('cid: ' + str(cid) + '. tipo: ' + str(tipo) + '.')
         ocache = memcache.get('cacheCategoria' + str(cid))
         if ocache is None:
+		logging.error('No se encontro o no se pudo cargar cache cacheCategoria' + str(cid) + '. Busqueda en DataStore y creacion de cache.')
                 ofertaslist = []
 		try:
 	                ofertas = Oferta.all().filter("IdCat =", int(cid)).order("-FechaHora").run()
@@ -375,6 +378,7 @@ def cacheGeneral(tipo=None):
         #logging.info('tipo: ' + str(tipo) + '.')
         ocache = memcache.get('cacheGeneral')
         if ocache is None:
+		logging.error('No se encontro o no se pudo cargar cache cacheGeneral. Busqueda en DataStore y creacion de cache.')
                 ofertaslist = []
 		try:
 	                ofertas = Oferta.all().order("-FechaHora").run(limit=1500)

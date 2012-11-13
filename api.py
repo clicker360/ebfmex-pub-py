@@ -202,23 +202,28 @@ class MvBlobGen(webapp.RequestHandler):
 				sucdict['direccion'] = {'calle': suc.DirCalle, 'colonia': suc.DirCol, 'cp': suc.DirCp,'entidad_id': suc.DirEnt, 'entidad': ent,'municipio_id': suc.DirMun, 'municipio': mun}
 				empresas = Empresa.all().filter("IdEmp = ", suc.IdEmp)
 	                        for empresa in empresas.run(limit=1):
-			                empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': 'http://' + APPID + '/spic?IdEmp=' + empresa.IdEmp}
+			                empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre, 'url': empresa.Url, 'url_logo': ''}
 		                        sucdict['empresa'] = empresadict
+				urllogo = 'http://www.elbuenfin.org/imgs/imageDefault.png'
 				ofertaslist = []
 				for o in olist:
 					ofertas = Oferta.all().filter("IdOft =", o).run()
 					for oferta in ofertas:
-						url = ''
+						url = 'http://www.elbuenfin.org/imgs/imageDefault.png'
 		                                try:
 		                                        if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
 		                                                url = oferta.Codigo
 						except AttributeError:
 	                                                err = 'logourl'
 						try:
-		                                        if url == '' and oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+		                                        if oferta.Codigo is None and oferta.BlobKey  and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
 								url = 'http://' + APPID + '/ofimg?id=' + str(oferta.BlobKey.key())
 		                                except AttributeError:
 		                                        err = 'logourl'
+						if url == 'http://www.elbuenfin.org/imgs/imageDefault.png' and oferta.Promocion is not None and oferta.Promocion != '':
+							url = oferta.Promocion
+						if oferta.Promocion is not None and oferta.Promocion != '':
+							urllogo = oferta.Promocion
 						ofertadict = {'id': oferta.IdOft, 'oferta': oferta.Oferta, 'descripcion': oferta.Descripcion, 'descuento': oferta.Descuento, 'promocion': oferta.Promocion, 'enlinea': oferta.Enlinea, 'precio': oferta.Precio, 'url': oferta.Url, 'url_logo': url, 'fechapub': str(oferta.FechaHoraPub.strftime('%Y-%m-%d'))}
 	                                        palabraslist = []
 	                                        palabras = OfertaPalabra.all().filter("IdOft =", oferta.IdOft)
@@ -234,6 +239,7 @@ class MvBlobGen(webapp.RequestHandler):
 
 						ofertaslist.append(ofertadict)
 				sucdict['ofertas'] = ofertaslist
+				sucdict['empresa']['url_logo'] = urllogo
 				mvblob = MvBlob()
 				mvblob.FechaHora = suc.FechaHora
 				mvblob.IdSuc = suc.IdSuc
