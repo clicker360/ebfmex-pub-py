@@ -88,3 +88,8 @@ indexes:
   properties:
   - name: IdOft
   - name: IdEnt
+
+- kind: SearchData
+  properties:
+  - name: Kind
+  - name: Value

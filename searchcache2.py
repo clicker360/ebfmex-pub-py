@@ -72,7 +72,7 @@ class searchCache(webapp.RequestHandler):
 						searchdata = SearchData.all().filter("Kind =", 'Oferta').filter("Value >=", init).filter("Value <", init + u"\ufffd")
 						#searchdata.order("-FechaHora")
 						sdlist = []
-						for sd in searchdata.run(limit=1000):
+						for sd in searchdata.run():
 							try:
 								oferta = Oferta.get(sd.Sid)
 								try:
