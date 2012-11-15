@@ -41,6 +41,12 @@ class Empresa(db.Model):
 	FechaHora = db.DateTimeProperty()
 	Status = db.BooleanProperty()
 
+class EmpresaNm(db.Model):
+        IdEmp = db.StringProperty()
+        RFC = db.StringProperty()
+        Nombre = db.StringProperty()
+        RazonSoc = db.StringProperty()
+
 class Entidad(db.Model):
         CveEnt = db.StringProperty()
         Entidad  = db.StringProperty()

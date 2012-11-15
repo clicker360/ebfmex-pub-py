@@ -72,32 +72,35 @@ class searchCache(webapp.RequestHandler):
 						searchdata = SearchData.all().filter("Kind =", 'Oferta').filter("Value >=", init).filter("Value <", init + u"\ufffd")
 						#searchdata.order("-FechaHora")
 						sdlist = []
-						for sd in searchdata.run(limit=1000):
+						for sd in searchdata.run(limit=600):
 							try:
 								oferta = Oferta.get(sd.Sid)
-								try:
-									estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
-								except AttributeError:
-									estados = []
-								hasestado = False
-								logourl = ''
-								promocion = 'http://www.elbuenfin.org/imgs/imageDefault.png'
-								if oferta.Promocion is not None and oferta.Promocion != '':
-									promocion = oferta.Promocion
-								try:
-									if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
-										logourl = oferta.Codigo
-									elif oferta.BlobKey and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
-										logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
-								except AttributeError:
+								if oferta.FechaHoraPub <= datetime.now() - timedelta(hours = H):
+									try:
+										estados = OfertaEstado.all().filter("IdOft =", oferta.IdOft)
+									except AttributeError:
+										estados = []
+									hasestado = False
 									logourl = ''
-								for estado in estados:
-									hasestado = True
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
-									sdlist.append(sddict)
-								if not hasestado:
-									sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
-	       	                                                       	sdlist.append(sddict)
+									promocion = 'http://www.elbuenfin.org/imgs/imageDefault.png'
+									if oferta.Promocion is not None and oferta.Promocion != '':
+										promocion = oferta.Promocion
+									try:
+										if oferta.Codigo and oferta.Codigo.replace('https://','http://')[0:7] == 'http://':
+											logourl = oferta.Codigo
+										elif oferta.BlobKey and oferta.BlobKey != None and oferta.BlobKey.key() != 'none':
+											logourl = '/ofimg?id=' + str(oferta.BlobKey.key())
+									except AttributeError:
+										logourl = ''
+									for estado in estados:
+										hasestado = True
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
+										sdlist.append(sddict)
+									if not hasestado:
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
+		       	                                                       	sdlist.append(sddict)
+								else:
+									pass
 							except AttributeError:
 								pass
 							except db.BadValueError:
@@ -230,12 +233,12 @@ def cacheEstado(eid, cid=None,tipo=None):
 		ofertaslist = []
 		ofertasE = OfertaEstado.all().filter("IdEnt =", str(eid))
 		unfoundo = 0
-		for ofertaE in ofertasE.run():
+		for ofertaE in ofertasE.run(limit=800):
 			idoft = ofertaE.IdOft
 			ofts = Oferta.all().filter("IdOft =", ofertaE.IdOft)
 			#logging.info('IdOft: ' + idoft)
 			try:
-				for oft in ofts:
+				for oft in ofts.run(limit=1):
 					oferta = oft
 				try:
 		                        logourl = ''
@@ -253,7 +256,7 @@ def cacheEstado(eid, cid=None,tipo=None):
 				else:
 					tipo = 2
 				if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
+					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
 					ofertaslist.append(ofertadict)
 			except UnboundLocalError:
 				unfoundo += 1
@@ -305,7 +308,7 @@ def cacheCategoria(cid,tipo=None):
 		logging.error('No se encontro o no se pudo cargar cache cacheCategoria' + str(cid) + '. Busqueda en DataStore y creacion de cache.')
                 ofertaslist = []
 		try:
-	                ofertas = Oferta.all().filter("IdCat =", int(cid)).order("-FechaHora").run()
+	                ofertas = Oferta.all().filter("IdCat =", int(cid)).order("-FechaHora").run(limit=800)
 		except db.BadValueError:
 			ofertas = db.GqlQuery("SELECT IdOft, IdCat, Oferta, Descripcion, IdEmp, Codigo, Enlinea FROM Oferta")
                 unfoundo = 0
@@ -337,7 +340,7 @@ def cacheCategoria(cid,tipo=None):
 	                                tipo = 2
 				for eid in elist:
 					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist)
 	                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 7200)
@@ -375,7 +378,7 @@ def cacheGeneral(tipo=None):
 		logging.error('No se encontro o no se pudo cargar cache cacheGeneral. Busqueda en DataStore y creacion de cache.')
                 ofertaslist = []
 		try:
-	                ofertas = Oferta.all().order("-FechaHora").run(limit=1500)
+	                ofertas = Oferta.all().order("-FechaHora").run(limit=800)
 		except db.BadValueError:
 			ofertas = db.GqlQuery("SELECT IdOft, IdCat, Oferta, Descripcion, IdEmp, Codigo, Enlinea FROM Oferta")
                 unfoundo = 0
@@ -407,7 +410,7 @@ def cacheGeneral(tipo=None):
 	                                tipo = 2
 				for eid in elist:
 					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion}
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist, 'IdOft')
 	                memcache.add('cacheGeneral', json.dumps(ofertaslist), 7200)

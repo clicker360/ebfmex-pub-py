@@ -93,3 +93,19 @@ indexes:
   properties:
   - name: Kind
   - name: Value
+
+- kind: Oferta
+  properties:
+  - name: IdOft
+  - name: BlobKey
+  - name: Codigo
+
+- kind: Oferta
+  properties:
+  - name: IdOft
+  - name: Codigo
+
+- kind: EmpresaNm
+  properties:
+  - name: IdEmp
+  - name: Nombre

@@ -8,7 +8,7 @@ threadsafe: false
 
 builtins:
 - remote_api: on
-- appstats: on
+- appstats: off
 
 handlers:
 - url: /backend/reportectas.csv

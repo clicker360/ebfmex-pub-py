@@ -10,7 +10,7 @@ from google.appengine.api import app_identity
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
 
-from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria, MvBlob
+from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria, MvBlob, EmpresaNm
 from randString import randLetter, randString
 
 #APPID = app_identity.get_default_version_hostname()
@@ -631,37 +631,85 @@ class wsofertaxp(webapp.RequestHandler):
                                 ofertalist.append(ofertadict)
                         self.response.out.write(json.dumps(ofertalist))
 
-class wsempresas(webapp.RequestHandler):
+class wsempresastest(webapp.RequestHandler):
 	def get(self):
 		self.response.headers['Content-Type'] = 'text/plain'
 		#self.response.out.write(APPID + '\n')
-		ecache = memcache.get('wsEmpresas')
+		ecache = memcache.get('wsEmpresas_alfabeto')
 		if ecache is None:
-			#empresas = Empresa.all().order("Nombre")
-			lastempslist = []
-			empresasQ = db.GqlQuery("SELECT IdEmp, Nombre FROM Empresa ORDER BY FechaHora")
-			empresas = empresasQ.fetch(1000)
-			empresas.sort()
+			alfabeto = []
+			empresasQ = db.GqlQuery("SELECT Nombre, IdEmp FROM EmpresaNm")
+			empresasR = empresasQ.run(batch_size=100000)
+			empresas = []
+			for empresa in empresasR:
+				empresas.append(empresa)
+			empresas = sorted(empresas, key=lambda k: k.Nombre.lower().replace(' ','').replace('"','').replace('\'','').replace('(','').replace('{','').replace('[','').replace('+','').replace('1','0').replace('2','0').replace('3','0').replace('4','0').replace('5','0').replace('6','0').replace('7','0').replace('8','0').replace('9','0').replace('.','').replace(',','').replace(':',''))
 			letradict = {}
 			inite = None
+			lastinit = inite
+			empresadict = {}
 			for empresa in empresas:
 				#self.response.out.write(empresa.Nombre + '\n')
-				nombreClean = empresa.Nombre.replace(' ','').replace('"','').replace('\'','').replace('(','').replace('{','').replace('[','')
+				nombreClean = empresa.Nombre.replace(' ','').replace('"','').replace('\'','').replace('(','').replace('{','').replace('[','').replace('+','').replace('1','0').replace('2','0').replace('3','0').replace('4','0').replace('5','0').replace('6','0').replace('7','0').replace('8','0').replace('9','0').replace('.','').replace(',','').replace(':','')
 				inite = nombreClean[0].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n')
 				empresadict = {'id': empresa.IdEmp, 'nombre': empresa.Nombre}
+				#logging.info(empresadict)
 				try:
 					letradict[inite].append(empresadict)
+					letradict[inite] = sorted(letradict[inite], key=lambda k: k['nombre'])
+					lastinit = inite
 				except KeyError:
+					if lastinit is not None:
+						memcache.add('wsEmpresas_' + lastinit, json.dumps(letradict[lastinit]), 86400)
+						alfabeto.append(lastinit)
+						logging.info('Append ' + lastinit)
+						lastinit = inite
 					letradict[inite] = []
 					letradict[inite].append(empresadict)
-			try:
-				memcache.add('wsEmpresas', json.dumps({'empresa_participantes': letradict}), 18000)
-			except ValueError:
-				logging.error('Couldn\'t write wsempresas cache.')
+					letradict[inite] = sorted(letradict[inite], key=lambda k: k['nombre'])
+			islastinit = False
+			for i in alfabeto:
+				if inite == i:
+					islastinit = True
+			if islastinit == False:
+				#letradict[inite].append(empresadict)
+				memcache.add('wsEmpresas_' + inite, json.dumps(letradict[inite]), 86400)
+				alfabeto.append(inite)
+			memcache.add('wsEmpresas_alfabeto', json.dumps(alfabeto), 86400)
 			self.response.out.write(json.dumps({'empresa_participantes': letradict}))	
 		else:
-			self.response.out.write(ecache)
+			alfabeto = json.loads(ecache)
+			letradict = {}
+			for letra in alfabeto:
+				#logging.info('Reading wsEmpresas_' + letra)
+				letracache = memcache.get('wsEmpresas_' + letra)
+				letracache = json.loads(letracache)
+				letradict[letra] = letracache
+			self.response.out.write(json.dumps(letradict))
 		#self.response.out.write(json.dumps({'empresas_participantes': []}))
+
+class wsempresas(webapp.RequestHandler):
+	def get(self):
+		alfabeto = 'abcdefghijklmnopqrstuvwxyz'
+		outputdict = {}
+		for i in range(26):
+			letra = alfabeto[i]
+			logging.info('Getting count dirprefix_count_' + letra)
+			count = memcache.get('dirprefix_count_' + letra)
+			pages = int(count) / 200
+			letralist = []
+			if int(count) % 200 > 0:
+				pages += 1
+			for j in range(pages):
+				try:
+					empresas = json.loads(memcache.get('dirprefix_' + letra + '_' + str(j)))
+					for empresa in empresas:
+						empresadict = {'id': empresa['IdEmp'], 'nombre': empresa['Nombre']}
+						letralist.append(empresadict)
+				except TypeError:
+					pass
+			outputdict[letra] = sorted(letralist, key=lambda k: k['nombre'])
+		self.response.out.write(json.dumps(outputdict))
 
 class wsfaq(webapp.RequestHandler):
         def get(self):
@@ -701,85 +749,57 @@ class oxs(webapp.RequestHandler):
 		self.response.out.write(resp)
 
 class ofertaxsucursal(webapp.RequestHandler):
-	def post(self):
-		paramdict = self.request.get('params')
-		#params = paramdict.encode('ascii').replace('\'','')[1:-1].replace(' ','').split(",")
-		params=paramdict.encode('ascii').split(",")
-
-		ofertalist = []
-		for param in params:
-			ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdSuc = :1", param)
-                        ofertas = ofertasQ.fetch(1)
-                        ofertadict = {}
-                        for oferta in ofertas:
-                                ofertadict['id'] = oferta.IdOft
-                                tipo = None
-                                if oferta.Descuento == '' or oferta.Descuento == None:
-                                        tipo = 1
-                                else:
-                                        tipo = 0
-                                ofertadict['tipo_oferta'] = tipo
-                                ofertadict['oferta'] = oferta.Oferta
-                                ofertadict['descripcion'] = oferta.Descripcion
-				ofertadict['url_logo'] = 'http://' + APPID + '/ofimg?id=' + oferta.IdOft
-                                suclist = []
-                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
-                                sucursales = sucursalQ.run(batch_size=100)
-                                for suc in sucursales:
-                                        sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
-                                        suclist.append(sucdict)
-                                ofertadict['sucursales'] = suclist
-                                empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
-                                empresas = empQ.fetch(1)
-                                emplist = {}
-                                for empresa in empresas:
-                                        emplist['id'] = empresa.IdEmp
-                                        emplist['nombre'] = empresa.Nombre
-                                ofertadict['empresa'] = emplist
-                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
-			ofertalist.append(ofertadict)
-
-		outputdict = {'ofertas': ofertalist}
-		self.response.out.write(json.dumps(outputdict))
 	def get(self):
                 paramdict = self.request.get('params')
                 params=paramdict.encode('ascii').split(",")
 
                 ofertalist = []
                 for param in params:
-                        ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdSuc = :1", param)
-                        ofertas = ofertasQ.fetch(1)
-                        ofertadict = {}
-                        for oferta in ofertas:
-                                ofertadict['id'] = oferta.IdOft
-                                tipo = None
-                                if oferta.Descuento == '' or oferta.Descuento == None:
-                                        tipo = 1
-                                else:
-                                        tipo = 0
-                                ofertadict['tipo_oferta'] = tipo
-                                ofertadict['oferta'] = oferta.Oferta
-                                ofertadict['descripcion'] = oferta.Descripcion
-                                ofertadict['url_logo'] = 'http://' + APPID + '/ofimg?id=' + oferta.IdOft
-                                suclist = []
-                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
-                                sucursales = sucursalQ.run(batch_size=100)
-                                for suc in sucursales:
-                                        sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
-                                        suclist.append(sucdict)
-                                ofertadict['sucursales'] = suclist
-                                empQ = db.GqlQuery("SELECT * FROM Empresa WHERE IdEmp = :1", oferta.IdEmp)
-                                empresas = empQ.fetch(1)
-                                emplist = {}
-                                for empresa in empresas:
-                                        emplist['id'] = empresa.IdEmp
-                                        emplist['nombre'] = empresa.Nombre
-                                ofertadict['empresa'] = emplist
-                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
-                        ofertalist.append(ofertadict)
+			scache = memcache.get('OxS_' + param)
+			if scache is None:
+	                        ofertasQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdSuc = :1", param)
+	                        ofertas = ofertasQ.fetch(1)
+	                        ofertadict = {}
+	                        for oferta in ofertas:
+	                                ofertadict['id'] = oferta.IdOft
+	                                tipo = None
+	                                if oferta.Descuento == '' or oferta.Descuento == None:
+	                                        tipo = 1
+	                                else:
+	                                        tipo = 0
+	                                ofertadict['tipo_oferta'] = tipo
+	                                ofertadict['oferta'] = oferta.Oferta
+	                                ofertadict['descripcion'] = oferta.Descripcion
+					ofts = db.GqlQuery("SELECT Codigo FROM Oferta WHERE IdOft = :1", oferta.IdOft)
+					oft = ofts.fetch(1)[0]
+					logourl = ''
+					if oft.Codigo and oft.Codigo.replace('https://','http://')[0:7] == 'http://':
+	                                        logourl = oft.Codigo
+					"""try:
+	                                        if logourl == '' and oft.BlobKey and oft.BlobKey != None and oft.BlobKey.key() != 'none':
+	                                                logourl = '/ofimg?id=' + str(oft.BlobKey.key())
+					except AttributeError:
+						error = 'logourl'"""
+					if logourl == '' and oft.Promocion and oft.Promocion != '':
+						logourl = oft.Promocion
+	                                ofertadict['url_logo'] = logourl
+	                                suclist = []
+	                                sucursalQ = db.GqlQuery("SELECT * FROM OfertaSucursal WHERE IdOft = :1", oferta.IdOft)
+	                                sucursales = sucursalQ.run(batch_size=100)
+	                                for suc in sucursales:
+	                                        sucdict = {'id': suc.IdSuc, 'lat': suc.Lat, 'long': suc.Lng}
+	                                        suclist.append(sucdict)
+	                                ofertadict['sucursales'] = suclist
+	                                emplist = {'id': oferta.IdEmp, 'nombre': oferta.Empresa}
+	                                ofertadict['empresa'] = emplist
+	                                ofertadict['ofertas_relacionadas'] = randOffer(3,oferta.IdEmp)
+	                        ofertalist.append(ofertadict)
+				memcache.add('OxS_' + param, json.dumps(ofertalist), 86400)
+			else:
+				ofertalist = json.loads(scache)
 
-                outputdict = {'ofertas': ofertalist}
-                self.response.out.write(json.dumps(outputdict))
+	                outputdict = {'ofertas': ofertalist}
+	                self.response.out.write(json.dumps(outputdict))
 
 class changecontrol(webapp.RequestHandler):
 	def get(self):
