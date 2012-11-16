@@ -9,6 +9,7 @@ from google.appengine.ext import db
 from google.appengine.api import app_identity
 from google.appengine.api import memcache
 from google.appengine.api import taskqueue
+from google.appengine.api import urlfetch
 
 from models import Sucursal, OfertaSucursal, Oferta, OfertaPalabra, Entidad, Municipio, Empresa, ChangeControl, Categoria, MvBlob, EmpresaNm
 from randString import randLetter, randString
@@ -709,6 +710,7 @@ class wsempresas(webapp.RequestHandler):
 				except TypeError:
 					pass
 			outputdict[letra] = sorted(letralist, key=lambda k: k['nombre'])
+		self.response.headers['Content-Type'] = 'text/plain'
 		self.response.out.write(json.dumps(outputdict))
 
 class wsfaq(webapp.RequestHandler):
@@ -832,3 +834,38 @@ class changecontrol(webapp.RequestHandler):
 					changesdict = {'fecha': str(change.FechaHora), 'id': change.Id, 'modelo': change.Kind, 'tipo': change.Status}
 					changeslist.append(changesdict)
 				self.response.out.write(json.dumps(changeslist))
+
+class ultimasOfertas(webapp.RequestHandler):
+	def get(self):
+		url = "http://movil.ebfmxorg.appspot.com/search?pagina=1&tipo=1&kind=Oferta&batchsize=800"
+		result = urlfetch.fetch(url)
+		self.response.out.write(result.content)
+
+class wsempresasblob(webapp.RequestHandler):
+	def get(self):
+		cache = memcache.get('wsEmpresasBlob')
+		if cache is None:
+			blobs = MvBlob.all()
+			emplist = []
+			outputdict = {}
+			for blob in blobs:
+				blob = json.loads(blob.Blob)
+				init = blob['empresa']['nombre'].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n').replace(':','').replace('.','').replace(' ','').replace(',','').replace('(','').replace('{','').replace('[','')[0]
+				empresadict = {'id': blob['empresa']['id'], 'nombre': blob['empresa']['nombre']}
+				exists = False
+				for emp in emplist:
+					if emp == empresadict['id']:
+						exists = True
+				if not exists:
+					emplist.append(empresadict['id'])
+					try:
+						outputdict[init].append(empresadict)
+						outputdict[init] = sorted(outputdict[init], key=lambda k: k['nombre'].lower().replace(u'\u00e1',u'a').replace(u'\u00e9',u'e').replace(u'\u00ed',u'i').replace(u'\u00f3',u'o').replace(u'\u00fa',u'u').replace(u'\u00f1',u'n').replace(':','').replace('.',''))
+					except KeyError:
+						outputdict[init] = []
+						outputdict[init].append(empresadict)
+			memcache.add('wsEmpresasBlob', json.dumps(outputdict), 86400)
+		else:
+			outputdict = json.loads(cache)
+		self.response.headers['Content-Type'] = 'text/plain'
+		self.response.out.write(json.dumps(outputdict))

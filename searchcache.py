@@ -15,6 +15,7 @@ from sendmail import sendmail
 
 H = 6
 APPID = app_identity.get_default_version_hostname()
+LIMIT = 1000
 
 class searchCache(webapp.RequestHandler):
 	def get(self):
@@ -64,7 +65,7 @@ class searchCache(webapp.RequestHandler):
 			nbkeywords = len(kwlist)
 			if nbkeywords > 0:
 				for kw in kwlist:
-					init = kw[0:2]
+					init = kw[0:3]
 					kwcache = memcache.get(init)
 					if kwcache is None:
 						logging.error('No se encontro o no se pudo cargar cache ' + init + '. Busqueda en DataStore y creacion de cache.')
@@ -72,7 +73,7 @@ class searchCache(webapp.RequestHandler):
 						searchdata = SearchData.all().filter("Kind =", 'Oferta').filter("Value >=", init).filter("Value <", init + u"\ufffd")
 						#searchdata.order("-FechaHora")
 						sdlist = []
-						for sd in searchdata.run(limit=600):
+						for sd in searchdata.run(limit=LIMIT):
 							try:
 								oferta = Oferta.get(sd.Sid)
 								if oferta.FechaHoraPub <= datetime.now() - timedelta(hours = H):
@@ -94,10 +95,10 @@ class searchCache(webapp.RequestHandler):
 										logourl = ''
 									for estado in estados:
 										hasestado = True
-										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': estado.IdEnt, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa, 'url': oferta.Url}
 										sdlist.append(sddict)
 									if not hasestado:
-										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
+										sddict = {'Key': sd.Sid, 'Value': sd.Value, 'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': None, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'Enlinea': oferta.Enlinea, 'IdEmp': oferta.IdEmp, 'FechaHoraPub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa, 'url': oferta.Url}
 		       	                                                       	sdlist.append(sddict)
 								else:
 									pass
@@ -105,8 +106,34 @@ class searchCache(webapp.RequestHandler):
 								pass
 							except db.BadValueError:
 								pass
+							except db.BadKeyError:
+								logging.error('Key error: ' + sd.Sid)
+								pass
 						sdlist = sortu(sdlist, 'IdOft')
-						memcache.add(kw[0:2], json.dumps(sdlist), 5400)
+						try:
+							memcache.add(kw[0:3], json.dumps(sdlist), 5400)
+						except ValueError:
+							lim = LIMIT - 100
+							logging.error('Couldn\'t create cache ' + kw[0:3] + ' of sdlist. Down to sdlist[0:' + str(lim) + ']')
+							try:
+								memcache.add(kw[0:3], json.dumps(sdlist[0:lim]), 5400)
+							except ValueError:
+								lim = LIMIT - 200
+								logging.error('Couldn\'t create cache ' + kw[0:3] + ' of sdlist. Down to sdlist[0:' + str(lim) + ']')
+								try:
+									memcache.add(kw[0:3], json.dumps(sdlist[0:lim]), 5400)
+								except ValueError:
+									lim = LIMIT - 300
+									logging.error('Couldn\'t create cache ' + kw[0:3] + ' of sdlist. Down to sdlist[0:' + str(lim) + ']')
+									try:
+										memcache.add(kw[0:3], json.dumps(sdlist[0:lim]), 5400)
+									except ValueError:
+										lim = LIMIT - 400
+										logging.error('Couldn\'t create cache ' + kw[0:3] + ' of sdlist. Down to sdlist[0:' + str(lim) + ']')
+										try:
+											memcache.add(kw[0:3], json.dumps(sdlist[0:lim]), 5400)
+										except ValueError:
+											logging.error('Couldn\'t create cache ' + kw[0:3] + ' of sdlist[0:' + str(lim) + ']. EXIT')
 
 						kwresults = sdlist
 					else:
@@ -116,7 +143,7 @@ class searchCache(webapp.RequestHandler):
 					kwresults = []
 					for kw in kwlist:
 						try:
-							kwresultscache = json.loads(memcache.get(kw[0:2]))
+							kwresultscache = json.loads(memcache.get(kw[0:3]))
 							for element in kwresultscache:
 								kwresults.append(element)
 						except TypeError:
@@ -143,7 +170,7 @@ class searchCache(webapp.RequestHandler):
 								validresult = False
 						if gkind == 'Oferta':
 							fechapub = datetime.strptime(kwresult['FechaHoraPub'].split('.')[0], '%Y-%m-%d %H:%M:%S')
-							if fechapub > datetime.now():
+							if fechapub > datetime.now() - timedelta(hours = H):
 								#self.response.out.write(str(fechapub) + ' > ' + str(datetime.now()) + '\n')
 								validresult = False
 							else:
@@ -184,11 +211,17 @@ class searchCache(webapp.RequestHandler):
 								resultslist.append(kwresult)
 					else:
 						break
-				self.response.out.write(callback + '(' + json.dumps(sortu(resultslist)) + ')')
+				if callback and callback is not None and callback != '':
+					self.response.out.write(callback + '(' + json.dumps(sortu(resultslist)) + ')')
+				else:
+					self.response.out.write(json.dumps(sortu(resultslist)))
 			else:
 				#errordict = {'error': -2, 'message': 'keyword variable present but no valid keyword found: with len(keyword) > 3'}
 	                        #self.response.out.write(json.dumps(errordict))
-				self.response.out.write(callback + '(' + json.dumps([]) + ')')
+				if callback and callback is not None and callback != '':
+					self.response.out.write(callback + '(' + json.dumps([]) + ')')
+				else:
+					self.response.out.write(json.dumps([]))
 		else:
 			if gkind == 'Oferta' and estado and estado is not None and estado != '':
 				#self.response.out.write("1")
@@ -199,7 +232,10 @@ class searchCache(webapp.RequestHandler):
 				for oferta in ofertas[batchstart:batchsize]:
 					outputlist.append(oferta)
 				#self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
-				self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+				if callback and callback is not None and callback != '':
+					self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+				else:
+					self.response.out.write(json.dumps(outputlist))
 			elif gkind == 'Oferta' and categoria is not None and categoria != '':
 				#self.response.out.write("2")
 				outputlist = []
@@ -209,7 +245,10 @@ class searchCache(webapp.RequestHandler):
                                 for oferta in ofertas[batchstart:batchsize]:
                                         outputlist.append(oferta)
                                 #self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
-                                self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+				if callback and callback is not None and callback != '':
+	                                self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+				else:
+					self.response.out.write(json.dumps(outputlist))
 			elif gkind == 'Oferta':
 				#self.response.out.write("3")
 				outputlist = []
@@ -220,7 +259,10 @@ class searchCache(webapp.RequestHandler):
                                         outputlist.append(oferta)
 				#logging.info('Batch[%s:%s]', batchstart, batchsize)
                                 #self.response.out.write('[' + str(batchstart) + ':' + str(batchstart + batchsize) + ']')
-                                self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+				if callback and callback is not None and callback != '':
+	                                self.response.out.write(callback + '(' + json.dumps(outputlist) + ')')
+				else:
+					self.response.out.write(json.dumps(outputlist))
 			else:
 				#self.response.out.write("4")
 				logging.error('Kind ' + gkind + ' not sopported in Search.')
@@ -255,8 +297,8 @@ def cacheEstado(eid, cid=None,tipo=None):
 					tipo = 1
 				else:
 					tipo = 2
-				if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
+				if oferta.FechaHoraPub <= datetime.now() - timedelta(hours = H) and oferta.Oferta != 'Nueva oferta':
+					ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa, 'url': oferta.Url}
 					ofertaslist.append(ofertadict)
 			except UnboundLocalError:
 				unfoundo += 1
@@ -339,8 +381,8 @@ def cacheCategoria(cid,tipo=None):
 	                        else:
 	                                tipo = 2
 				for eid in elist:
-					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
+					if oferta.FechaHoraPub <= datetime.now() - timedelta(hours = H) and oferta.Oferta != 'Nueva oferta':
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa, 'url': oferta.Url}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist)
 	                memcache.add('cacheCategoria' + str(cid), json.dumps(ofertaslist), 7200)
@@ -409,8 +451,8 @@ def cacheGeneral(tipo=None):
 	                        else:
 	                                tipo = 2
 				for eid in elist:
-					if oferta.FechaHoraPub <= datetime.now() and oferta.Oferta != 'Nueva oferta':
-			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa}
+					if oferta.FechaHoraPub <= datetime.now() - timedelta(hours = H) and oferta.Oferta != 'Nueva oferta':
+			                        ofertadict = {'IdOft': oferta.IdOft, 'IdCat': oferta.IdCat, 'Oferta': oferta.Oferta, 'IdEnt': eid, 'Logo': logourl, 'Descripcion': oferta.Descripcion, 'IdEmp': oferta.IdEmp, 'Tipo': tipo, 'fechapub': str(oferta.FechaHoraPub), 'EmpLogo': promocion, 'Empresa': oferta.Empresa, 'url': oferta.Url}
 			                        ofertaslist.append(ofertadict)
 			ofertaslist = sortu(ofertaslist, 'IdOft')
 	                memcache.add('cacheGeneral', json.dumps(ofertaslist), 7200)

@@ -8,7 +8,7 @@ from google.appengine.ext.webapp.util import run_wsgi_app
 from google.appengine.ext.webapp import template
 
 from models import Cta
-from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol, MvBlobServe, MvBlobGen, MvBlobGenTask, MvBlobServePub
+from api import wsoferta, wsofertas, wsofertaxc, wsofertaxp, wsfaq, sucursales, ofertaxsucursal, oxs, wsempresas, changecontrol, MvBlobServe, MvBlobGen, MvBlobGenTask, MvBlobServePub, ultimasOfertas, wsempresasblob
 from geostuff import geogenerate
 from backend import search
 from searchcache import searchCache
@@ -35,7 +35,9 @@ application = webapp.WSGIApplication([
 	#('/wsofertas', wsofertas),
 	('/wsofertaxc', wsofertaxc),
 	('/wsofertaxp', wsofertaxp),
-	('/wsempresas', wsempresas),
+	#('/wsempresas', wsempresas),
+	('/wsempresas', wsempresasblob),
+	#('/wsempresasblob', wsempresasblob),
 	('/wsfaq', wsfaq),
 	#('/db', sucursales),
 	('/ofertaxsucursal', ofertaxsucursal),
@@ -49,6 +51,7 @@ application = webapp.WSGIApplication([
 	('/dbv', MvBlobServePub),
 	('/mvblob/generate/run', MvBlobGen),
 	('/mvblob/generate', MvBlobGenTask),
+	('/ofertasonline', ultimasOfertas),
 	], debug=True)
 
 def main():
