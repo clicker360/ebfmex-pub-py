@@ -868,4 +868,4 @@ class wsempresasblob(webapp.RequestHandler):
 		else:
 			outputdict = json.loads(cache)
 		self.response.headers['Content-Type'] = 'text/plain'
-		self.response.out.write(json.dumps(outputdict))
+		self.response.out.write(json.dumps({'empresa_participantes': outputdict}))
